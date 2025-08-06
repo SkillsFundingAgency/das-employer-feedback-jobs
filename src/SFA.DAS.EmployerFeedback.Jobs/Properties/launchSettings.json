@@ -1,0 +1,8 @@
+{
+  "profiles": {
+    "SFA.DAS.EmployerFeedback.Jobs": {
+      "commandName": "Project",
+      "commandLineArgs": "--port 8081"
+    }
+  }
+}
