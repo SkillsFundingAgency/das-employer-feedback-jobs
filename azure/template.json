@@ -286,12 +286,7 @@
                                 {
                                     "name": "WEBSITE_RUN_FROM_PACKAGE",
                                     "value": "1"
-                                },
-                                {
-                                    "name": "netFrameworkVersion",
-                                    "value": "v8.0"
                                 }
-
                             ]
                         }
                     },
