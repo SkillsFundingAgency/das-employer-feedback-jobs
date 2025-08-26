@@ -1,11 +1,13 @@
 ﻿using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using SFA.DAS.EmployerFeedback.Jobs.Extensions;
+using System.Diagnostics.CodeAnalysis;
 
 namespace SFA.DAS.EmployerFeedback.Jobs
 {
     static class Program
     {
+        [ExcludeFromCodeCoverage]
         static async Task Main(string[] args)
         {
             var host = new HostBuilder()
