@@ -65,6 +65,9 @@
         "logAnalyticsWorkspaceName": {
             "type": "string"
         },
+        "syncEmployerAccountsTimerSchedule": {
+            "type": "string"
+        },
         "sharedManagementResourceGroup": {
             "type": "string"
         },
@@ -286,6 +289,10 @@
                                 {
                                     "name": "WEBSITE_RUN_FROM_PACKAGE",
                                     "value": "1"
+                                },
+                                {
+                                    "name": "SyncEmployerAccountsTimerSchedule",
+                                    "value": "[parameters('syncEmployerAccountsTimerSchedule')]"
                                 }
                             ]
                         }
