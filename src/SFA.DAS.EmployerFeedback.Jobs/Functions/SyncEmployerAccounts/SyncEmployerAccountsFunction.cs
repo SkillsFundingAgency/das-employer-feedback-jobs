@@ -41,7 +41,7 @@ namespace SFA.DAS.EmployerFeedback.Jobs.Functions.SyncEmployerAccounts
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "{FunctionName} has has failed", functionName);
+                _logger.LogError(ex, "{FunctionName} has failed", functionName);
                 throw;
             }
         }
