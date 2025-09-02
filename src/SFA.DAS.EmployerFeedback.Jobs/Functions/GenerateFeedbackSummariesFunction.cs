@@ -6,10 +6,10 @@ namespace SFA.DAS.EmployerFeedback.Jobs.Functions
 {
     public class GenerateFeedbackSummariesFunction
     {
-        private readonly ILogger<SyncEmployerAccountsFunction> _logger;
+        private readonly ILogger<GenerateFeedbackSummariesFunction> _logger;
         private readonly IEmployerFeedbackOuterApi _api;
 
-        public GenerateFeedbackSummariesFunction(ILogger<SyncEmployerAccountsFunction> log, IEmployerFeedbackOuterApi api)
+        public GenerateFeedbackSummariesFunction(ILogger<GenerateFeedbackSummariesFunction> log, IEmployerFeedbackOuterApi api)
         {
             _logger = log;
             _api = api;

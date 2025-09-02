@@ -11,14 +11,14 @@ namespace SFA.DAS.EmployerFeedback.Jobs.UnitTests.Functions
     [TestFixture]
     public class GenerateFeedbackSummariesFunctionTests
     {
-        private Mock<ILogger<SyncEmployerAccountsFunction>> _loggerMock;
+        private Mock<ILogger<GenerateFeedbackSummariesFunction>> _loggerMock;
         private Mock<IEmployerFeedbackOuterApi> _apiMock;
         private GenerateFeedbackSummariesFunction _function;
 
         [SetUp]
         public void SetUp()
         {
-            _loggerMock = new Mock<ILogger<SyncEmployerAccountsFunction>>();
+            _loggerMock = new Mock<ILogger<GenerateFeedbackSummariesFunction>>();
             _apiMock = new Mock<IEmployerFeedbackOuterApi>();
             _function = new GenerateFeedbackSummariesFunction(_loggerMock.Object, _apiMock.Object);
         }
