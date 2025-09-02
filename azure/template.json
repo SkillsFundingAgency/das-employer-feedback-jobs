@@ -68,7 +68,7 @@
         "syncEmployerAccountsTimerSchedule": {
             "type": "string"
         },
-        "generateFeedbackSummariesFunctionTimerSchedule  ": {
+        "generateFeedbackSummariesFunctionTimerSchedule": {
             "type": "string"
         },
         "sharedManagementResourceGroup": {
