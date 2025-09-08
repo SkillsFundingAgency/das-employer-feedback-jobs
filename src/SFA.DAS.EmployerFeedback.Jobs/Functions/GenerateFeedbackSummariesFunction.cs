@@ -18,10 +18,6 @@ namespace SFA.DAS.EmployerFeedback.Jobs.Functions
         [Function(nameof(GenerateFeedbackSummariesFunctionTimer))]
         public async Task GenerateFeedbackSummariesFunctionTimer([TimerTrigger("%GenerateFeedbackSummariesFunctionTimerSchedule%", RunOnStartup = false)] TimerInfo timer)
         {
-            await Run(nameof(GenerateFeedbackSummariesFunctionTimer));
-        }
-        private async Task Run(string functionName)
-        {
             try
             {
                 _logger.LogInformation("GenerateFeedbackSummariesFunctionTimer has started");

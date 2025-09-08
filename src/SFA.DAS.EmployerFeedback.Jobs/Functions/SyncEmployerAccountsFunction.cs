@@ -26,22 +26,17 @@ namespace SFA.DAS.EmployerFeedback.Jobs.Functions
         [Function(nameof(SyncEmployerAccountsTimer))]
         public async Task SyncEmployerAccountsTimer([TimerTrigger("%SyncEmployerAccountsTimerSchedule%", RunOnStartup = false)] TimerInfo timer)
         {
-            await Run(nameof(SyncEmployerAccountsTimer));
-        }
-
-        private async Task Run(string functionName)
-        {
             try
             {
-                _logger.LogInformation("{FunctionName} has started", functionName);
+                _logger.LogInformation("SyncEmployerAccountsTimer has started");
 
                 await _api.SyncEmployerAccounts();
 
-                _logger.LogInformation("{FunctionName} has finished", functionName);
+                _logger.LogInformation("SyncEmployerAccountsTimer has finished");
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "{FunctionName} has failed", functionName);
+                _logger.LogError(ex, "SyncEmployerAccountsTimer has failed");
                 throw;
             }
         }
