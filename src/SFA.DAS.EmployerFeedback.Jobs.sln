@@ -9,7 +9,7 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "SFA.DAS.EmployerFeedback.Jo
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "SFA.DAS.EmployerFeedback.Infrastructure", "SFA.DAS.EmployerFeedback.Infrastructure\SFA.DAS.EmployerFeedback.Infrastructure.csproj", "{18DA033D-65A5-4526-9A57-0D15B9D37CAC}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SFA.DAS.EmployerFeedback.Jobs.UnitTests", "SFA.DAS.EmployerFeedback.UnitTests\SFA.DAS.EmployerFeedback.Jobs.UnitTests.csproj", "{43EEC861-7995-DE94-8E04-E951E5822B77}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SFA.DAS.EmployerFeedback.Jobs.UnitTests", "SFA.DAS.EmployerFeedback.Jobs.UnitTests\SFA.DAS.EmployerFeedback.Jobs.UnitTests.csproj", "{43EEC861-7995-DE94-8E04-E951E5822B77}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

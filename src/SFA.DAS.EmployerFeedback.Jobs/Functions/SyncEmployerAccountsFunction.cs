@@ -2,7 +2,7 @@ using Microsoft.Azure.Functions.Worker;
 using Microsoft.Extensions.Logging;
 using SFA.DAS.EmployerFeedback.Infrastructure.Api;
 
-namespace SFA.DAS.EmployerFeedback.Jobs.Functions.SyncEmployerAccounts
+namespace SFA.DAS.EmployerFeedback.Jobs.Functions
 {
     public class SyncEmployerAccountsFunction
     {
@@ -24,24 +24,19 @@ namespace SFA.DAS.EmployerFeedback.Jobs.Functions.SyncEmployerAccounts
         // Test case for this Azure Function needs to be implemented
         // as part of the SyncEmployerAccounts Function ticket.
         [Function(nameof(SyncEmployerAccountsTimer))]
-        public async Task SyncEmployerAccountsTimer([TimerTrigger("%SyncEmployerAccountsTimerSchedule%", RunOnStartup = true)] TimerInfo timer)
-        {
-            await Run(nameof(SyncEmployerAccountsTimer));
-        }
-
-        private async Task Run(string functionName)
+        public async Task SyncEmployerAccountsTimer([TimerTrigger("%SyncEmployerAccountsTimerSchedule%", RunOnStartup = false)] TimerInfo timer)
         {
             try
             {
-                _logger.LogInformation("{FunctionName} has started", functionName);
+                _logger.LogInformation("SyncEmployerAccountsTimer has started");
 
                 await _api.SyncEmployerAccounts();
 
-                _logger.LogInformation("{FunctionName} has finished", functionName);
+                _logger.LogInformation("SyncEmployerAccountsTimer has finished");
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "{FunctionName} has failed", functionName);
+                _logger.LogError(ex, "SyncEmployerAccountsTimer has failed");
                 throw;
             }
         }

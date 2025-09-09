@@ -9,5 +9,7 @@ namespace SFA.DAS.EmployerFeedback.Infrastructure.Api
     {
         [Get("/attributes")]
         Task SyncEmployerAccounts();
+        [Post("dataload/generate-feedback-summaries")]
+        Task GenerateFeedbackSummaries();
     }
 }
