@@ -14,9 +14,9 @@ This azure functions solution is part of Employer Feedback project. Here we have
 
 ## How It Works
 
-The employer feedback generate summaries job causes the summary table of the latest feedback (stars) to be rebuilt.
+The Employer Feedback Generate Summaries job rebuilds the summary table with the latest feedback (star ratings).
 
-The Sync employer accounts job will ensure that the local employer feedback database stays in sync with the master Employer Accounts 
+The Sync Employer Accounts job ensures that the local Employer Feedback database remains in sync with the master Employer Accounts.
 
 ## 🚀 Installation
 
