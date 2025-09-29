@@ -2,13 +2,11 @@
 
 namespace SFA.DAS.EmployerFeedback.Infrastructure.Api
 {
-    // TODO:
-    // This endpoint currently points to '/attributes' only to test connectivity with the Outer API.
-    // This should be updated to the correct endpoint as part of the SyncEmployerAccounts ticket.
     public interface IEmployerFeedbackOuterApi
     {
-        [Get("/attributes")]
+        [Post("/account/update")]
         Task SyncEmployerAccounts();
+
         [Post("dataload/generate-feedback-summaries")]
         Task GenerateFeedbackSummaries();
     }
