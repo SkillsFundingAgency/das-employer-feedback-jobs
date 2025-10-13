@@ -1,94 +1,97 @@
 {
     "$schema": "https://schema.management.azure.com/schemas/2018-05-01/subscriptionDeploymentTemplate.json",
     "contentVersion": "1.0.0.0",
-    "parameters": {
-        "resourceEnvironmentName": {
-            "type": "string"
-        },
-        "environmentName": {
-            "type": "string"
-        },
-        "serviceName": {
-            "type": "string"
-        },
-        "sharedEnvResourceGroup": {
-            "type": "string"
-        },
-        "configurationStorageConnectionString": {
-            "type": "securestring"
-        },
-        "loggingRedisConnectionString": {
-            "type": "securestring"
-        },
-        "loggingRedisKey": {
-            "type": "string"
-        },
-        "deployPrivateLinkedScopedResource": {
-            "type": "bool"
-        },
-        "tags": {
-            "type": "object"
-        },
-        "resourceGroupLocation": {
-            "type": "string"
-        },
-        "sharedStorageAccountConnectionString": {
-            "type": "securestring"
-        },
-        "sharedEnvVirtualNetworkName": {
-            "type": "string"
-        },
-        "subnetObject": {
-            "type": "object"
-        },
-        "subnetServiceEndpointList": {
-            "type": "array"
-        },
-        "subnetDelegations": {
-            "type": "array"
-        },
-        "workerAccessRestrictions": {
-            "type": "array"
-        },
-        "appServicePlanInstances": {
-            "type": "int",
-            "defaultValue": 1
-        },
-        "appServicePlanSize": {
-            "type": "string",
-            "defaultValue": "1"
-        },
-        "logAnalyticsSubscriptionId": {
-            "type": "string",
-            "defaultValue": "[subscription().subscriptionId]"
-        },
-        "logAnalyticsWorkspaceName": {
-            "type": "string"
-        },
-        "syncEmployerAccountsTimerSchedule": {
-            "type": "string"
-        },
-        "generateFeedbackSummariesFunctionTimerSchedule": {
-            "type": "string"
-        },
-        "sharedManagementResourceGroup": {
-            "type": "string"
-        },
-        "utcValue": {
-            "type": "string",
-            "defaultValue": "[utcNow()]"
-        },
-        "vnetRouteAllEnabled": {
-            "type": "bool",
-            "defaultValue": false
-        },
-         "sharedApimResourceGroup": {
-            "type": "string"
-        },
-        "sharedApimName": {
-            "type": "string"
-        }
+  "parameters": {
+    "resourceEnvironmentName": {
+      "type": "string"
     },
+    "environmentName": {
+      "type": "string"
+    },
+    "serviceName": {
+      "type": "string"
+    },
+    "sharedEnvResourceGroup": {
+      "type": "string"
+    },
+    "configurationStorageConnectionString": {
+      "type": "securestring"
+    },
+    "loggingRedisConnectionString": {
+      "type": "securestring"
+    },
+    "loggingRedisKey": {
+      "type": "string"
+    },
+    "deployPrivateLinkedScopedResource": {
+      "type": "bool"
+    },
+    "tags": {
+      "type": "object"
+    },
+    "resourceGroupLocation": {
+      "type": "string"
+    },
+    "sharedStorageAccountConnectionString": {
+      "type": "securestring"
+    },
+    "sharedEnvVirtualNetworkName": {
+      "type": "string"
+    },
+    "subnetObject": {
+      "type": "object"
+    },
+    "subnetServiceEndpointList": {
+      "type": "array"
+    },
+    "subnetDelegations": {
+      "type": "array"
+    },
+    "workerAccessRestrictions": {
+      "type": "array"
+    },
+    "appServicePlanInstances": {
+      "type": "int",
+      "defaultValue": 1
+    },
+    "appServicePlanSize": {
+      "type": "string",
+      "defaultValue": "1"
+    },
+    "logAnalyticsSubscriptionId": {
+      "type": "string",
+      "defaultValue": "[subscription().subscriptionId]"
+    },
+    "logAnalyticsWorkspaceName": {
+      "type": "string"
+    },
+    "syncEmployerAccountsTimerSchedule": {
+      "type": "string"
+    },
+    "generateFeedbackSummariesFunctionTimerSchedule": {
+      "type": "string"
+    },
+    "generateFeedbackTransactionsTimerSchedule": {
+      "type": "string"
+    },
+    "sharedManagementResourceGroup": {
+      "type": "string"
+    },
+    "utcValue": {
+      "type": "string",
+      "defaultValue": "[utcNow()]"
+    },
+    "vnetRouteAllEnabled": {
+      "type": "bool",
+      "defaultValue": false
+    },
+    "sharedApimResourceGroup": {
+      "type": "string"
+    },
+    "sharedApimName": {
+      "type": "string"
+    }
+  },
     "variables": {
         "deploymentUrlBase": "https://raw.githubusercontent.com/SkillsFundingAgency/das-platform-building-blocks/master/templates/",
         "resourceNamePrefix": "[toLower(concat('das-', parameters('resourceEnvironmentName'),'-', parameters('serviceName')))]",
@@ -248,60 +251,64 @@
                     },
                     "functionAppAppSettings": {
                         "value": {
-                            "array": [
-                                {
-                                    "name": "EnvironmentName",
-                                    "value": "[parameters('environmentName')]"
-                                },
-                                {
-                                    "name": "ConfigurationStorageConnectionString",
-                                    "value": "[parameters('configurationStorageConnectionString')]"
-                                },
-                                {
-                                    "name": "ConfigNames",
-                                    "value": "[variables('configNames')]"
-                                },
-                                {
-                                    "name": "Version",
-                                    "value": "1.0"
-                                },
-                                {
-                                    "name": "APPLICATIONINSIGHTS_CONNECTION_STRING",
-                                    "value": "[reference(concat(variables('functionAppName'), '-application-insights-', parameters('utcValue'))).outputs.ConnectionString.value]"
-                                },
-                                {
-                                    "name": "AzureWebJobsStorage",
-                                    "value": "[parameters('sharedStorageAccountConnectionString')]"
-                                },
-                                {
-                                    "name": "LoggingRedisConnectionString",
-                                    "value": "[parameters('loggingRedisConnectionString')]"
-                                },
-                                {
-                                    "name": "LoggingRedisKey",
-                                    "value": "[parameters('loggingRedisKey')]"
-                                },
-                                {
-                                    "name": "FUNCTIONS_EXTENSION_VERSION",
-                                    "value": "~4"
-                                },
-                                {
-                                    "name": "FUNCTIONS_WORKER_RUNTIME",
-                                    "value": "dotnet-isolated"
-                                },
-                                {
-                                    "name": "WEBSITE_RUN_FROM_PACKAGE",
-                                    "value": "1"
-                                },
-                                {
-                                    "name": "SyncEmployerAccountsTimerSchedule",
-                                    "value": "[parameters('syncEmployerAccountsTimerSchedule')]"
-                                },
-                                {
-                                    "name": "GenerateFeedbackSummariesFunctionTimerSchedule",
-                                    "value": "[parameters('generateFeedbackSummariesFunctionTimerSchedule')]"
-                                }
-                            ]
+                          "array": [
+                            {
+                              "name": "EnvironmentName",
+                              "value": "[parameters('environmentName')]"
+                            },
+                            {
+                              "name": "ConfigurationStorageConnectionString",
+                              "value": "[parameters('configurationStorageConnectionString')]"
+                            },
+                            {
+                              "name": "ConfigNames",
+                              "value": "[variables('configNames')]"
+                            },
+                            {
+                              "name": "Version",
+                              "value": "1.0"
+                            },
+                            {
+                              "name": "APPLICATIONINSIGHTS_CONNECTION_STRING",
+                              "value": "[reference(concat(variables('functionAppName'), '-application-insights-', parameters('utcValue'))).outputs.ConnectionString.value]"
+                            },
+                            {
+                              "name": "AzureWebJobsStorage",
+                              "value": "[parameters('sharedStorageAccountConnectionString')]"
+                            },
+                            {
+                              "name": "LoggingRedisConnectionString",
+                              "value": "[parameters('loggingRedisConnectionString')]"
+                            },
+                            {
+                              "name": "LoggingRedisKey",
+                              "value": "[parameters('loggingRedisKey')]"
+                            },
+                            {
+                              "name": "FUNCTIONS_EXTENSION_VERSION",
+                              "value": "~4"
+                            },
+                            {
+                              "name": "FUNCTIONS_WORKER_RUNTIME",
+                              "value": "dotnet-isolated"
+                            },
+                            {
+                              "name": "WEBSITE_RUN_FROM_PACKAGE",
+                              "value": "1"
+                            },
+                            {
+                              "name": "SyncEmployerAccountsTimerSchedule",
+                              "value": "[parameters('syncEmployerAccountsTimerSchedule')]"
+                            },
+                            {
+                              "name": "GenerateFeedbackSummariesFunctionTimerSchedule",
+                              "value": "[parameters('generateFeedbackSummariesFunctionTimerSchedule')]"
+                            },
+                            {
+                              "name": "GenerateFeedbackTransactionsTimerSchedule",
+                              "value": "[parameters('generateFeedbackTransactionsTimerSchedule')]"
+                            }
+                          ]
                         }
                     },
                     "ipSecurityRestrictions": {
