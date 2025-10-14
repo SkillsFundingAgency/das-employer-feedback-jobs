@@ -110,7 +110,9 @@ namespace SFA.DAS.EmployerFeedback.Jobs.Functions
                     _logger.LogWarning(ex, "Retrying operation (attempt {CurrentAttempt} of {MaxAttempts})",
                         attempt + 1, maxAttempts);
 
-                    await Task.Delay(TimeSpan.FromSeconds(2 * attempt), cancellationToken);
+                    var delay = TimeSpan.FromSeconds(Math.Pow(2, attempt));
+
+                    await Task.Delay(delay, cancellationToken);
                 }
             }
         }
