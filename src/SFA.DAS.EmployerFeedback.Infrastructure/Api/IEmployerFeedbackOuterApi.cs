@@ -12,7 +12,7 @@ namespace SFA.DAS.EmployerFeedback.Infrastructure.Api
         Task GenerateFeedbackSummaries();
 
         [Get("/account")]
-        Task<GetEmployerAccountIdsResponse> GetEmployerAccountIds([Query] int batchsize);
+        Task<GetFeedbackTransactionAccountIdsResponse> GetFeedbackTransactionAccountIds([Query] int batchsize);
 
         [Post("/account/{accountId}/feedbacktransaction")]
         Task ProcessFeedbackTransactionForAccount([Path] string accountId);

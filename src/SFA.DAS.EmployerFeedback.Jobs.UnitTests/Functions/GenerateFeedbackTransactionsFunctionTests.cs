@@ -39,13 +39,13 @@ namespace SFA.DAS.EmployerFeedback.Jobs.UnitTests.Functions
         {
             var timerInfo = (Microsoft.Azure.Functions.Worker.TimerInfo)Activator.CreateInstance(typeof(Microsoft.Azure.Functions.Worker.TimerInfo), true);
             var accountIds = new List<string> { "account1", "account2", "account3", "account4" };
-            var response = new GetEmployerAccountIdsResponse { AccountIds = accountIds };
+            var response = new GetFeedbackTransactionAccountIdsResponse { AccountIds = accountIds };
 
-            _apiMock.Setup(x => x.GetEmployerAccountIds(It.IsAny<int>())).ReturnsAsync(response);
+            _apiMock.Setup(x => x.GetFeedbackTransactionAccountIds(It.IsAny<int>())).ReturnsAsync(response);
 
             await _function.GenerateFeedbackTransactionsTimer(timerInfo);
 
-            _apiMock.Verify(x => x.GetEmployerAccountIds(It.IsAny<int>()), Times.Once);
+            _apiMock.Verify(x => x.GetFeedbackTransactionAccountIds(It.IsAny<int>()), Times.Once);
             _apiMock.Verify(x => x.ProcessFeedbackTransactionForAccount(It.IsAny<string>()), Times.Exactly(4));
 
             _loggerMock.Verify(x => x.Log(
@@ -64,19 +64,19 @@ namespace SFA.DAS.EmployerFeedback.Jobs.UnitTests.Functions
         }
 
         [Test]
-        public async Task GenerateFeedbackTransactionsTimer_WhenGetAccountIdsThrows_RetriesAndSucceeds()
+        public async Task GenerateFeedbackTransactionsTimer_WhenGetFeedbackTransactionAccountIdsThrows_RetriesAndSucceeds()
         {
             var timerInfo = (Microsoft.Azure.Functions.Worker.TimerInfo)Activator.CreateInstance(typeof(Microsoft.Azure.Functions.Worker.TimerInfo), true);
             var accountIds = new List<string> { "account1" };
-            var response = new GetEmployerAccountIdsResponse { AccountIds = accountIds };
+            var response = new GetFeedbackTransactionAccountIdsResponse { AccountIds = accountIds };
 
-            _apiMock.SetupSequence(x => x.GetEmployerAccountIds(It.IsAny<int>()))
+            _apiMock.SetupSequence(x => x.GetFeedbackTransactionAccountIds(It.IsAny<int>()))
                 .ThrowsAsync(new HttpRequestException("Temporary error"))
                 .ReturnsAsync(response);
 
             await _function.GenerateFeedbackTransactionsTimer(timerInfo);
 
-            _apiMock.Verify(x => x.GetEmployerAccountIds(It.IsAny<int>()), Times.Exactly(2));
+            _apiMock.Verify(x => x.GetFeedbackTransactionAccountIds(It.IsAny<int>()), Times.Exactly(2));
             _apiMock.Verify(x => x.ProcessFeedbackTransactionForAccount("account1"), Times.Once);
 
             _loggerMock.Verify(x => x.Log(
@@ -92,9 +92,9 @@ namespace SFA.DAS.EmployerFeedback.Jobs.UnitTests.Functions
         {
             var timerInfo = (Microsoft.Azure.Functions.Worker.TimerInfo)Activator.CreateInstance(typeof(Microsoft.Azure.Functions.Worker.TimerInfo), true);
             var accountIds = new List<string> { "account1", "account2", "account3" };
-            var response = new GetEmployerAccountIdsResponse { AccountIds = accountIds };
+            var response = new GetFeedbackTransactionAccountIdsResponse { AccountIds = accountIds };
 
-            _apiMock.Setup(x => x.GetEmployerAccountIds(It.IsAny<int>())).ReturnsAsync(response);
+            _apiMock.Setup(x => x.GetFeedbackTransactionAccountIds(It.IsAny<int>())).ReturnsAsync(response);
             _apiMock.Setup(x => x.ProcessFeedbackTransactionForAccount("account2"))
                 .ThrowsAsync(new Exception("Processing failed"));
 
@@ -120,12 +120,12 @@ namespace SFA.DAS.EmployerFeedback.Jobs.UnitTests.Functions
         }
 
         [Test]
-        public void GenerateFeedbackTransactionsTimer_WhenGetAccountIdsFails_ThrowsException()
+        public void GenerateFeedbackTransactionsTimer_WhenGetFeedbackTransactionAccountIdsFails_ThrowsException()
         {
             var timerInfo = (Microsoft.Azure.Functions.Worker.TimerInfo)Activator.CreateInstance(typeof(Microsoft.Azure.Functions.Worker.TimerInfo), true);
             var exception = new Exception("API failed");
 
-            _apiMock.Setup(x => x.GetEmployerAccountIds(It.IsAny<int>())).ThrowsAsync(exception);
+            _apiMock.Setup(x => x.GetFeedbackTransactionAccountIds(It.IsAny<int>())).ThrowsAsync(exception);
 
             var ex = Assert.ThrowsAsync<Exception>(() => _function.GenerateFeedbackTransactionsTimer(timerInfo));
             Assert.That(ex, Is.EqualTo(exception));
@@ -146,9 +146,9 @@ namespace SFA.DAS.EmployerFeedback.Jobs.UnitTests.Functions
 
             var timerInfo = (Microsoft.Azure.Functions.Worker.TimerInfo)Activator.CreateInstance(typeof(Microsoft.Azure.Functions.Worker.TimerInfo), true);
             var accountIds = new List<string> { "account1", "account2" };
-            var response = new GetEmployerAccountIdsResponse { AccountIds = accountIds };
+            var response = new GetFeedbackTransactionAccountIdsResponse { AccountIds = accountIds };
 
-            _apiMock.Setup(x => x.GetEmployerAccountIds(It.IsAny<int>())).ReturnsAsync(response);
+            _apiMock.Setup(x => x.GetFeedbackTransactionAccountIds(It.IsAny<int>())).ReturnsAsync(response);
 
             await _function.GenerateFeedbackTransactionsTimer(timerInfo);
 
@@ -167,9 +167,9 @@ namespace SFA.DAS.EmployerFeedback.Jobs.UnitTests.Functions
         {
             var timerInfo = (Microsoft.Azure.Functions.Worker.TimerInfo)Activator.CreateInstance(typeof(Microsoft.Azure.Functions.Worker.TimerInfo), true);
             var accountIds = new List<string> { "account1" };
-            var response = new GetEmployerAccountIdsResponse { AccountIds = accountIds };
+            var response = new GetFeedbackTransactionAccountIdsResponse { AccountIds = accountIds };
 
-            _apiMock.Setup(x => x.GetEmployerAccountIds(It.IsAny<int>())).ReturnsAsync(response);
+            _apiMock.Setup(x => x.GetFeedbackTransactionAccountIds(It.IsAny<int>())).ReturnsAsync(response);
             _apiMock.Setup(x => x.ProcessFeedbackTransactionForAccount("account1"))
                 .ThrowsAsync(new HttpRequestException("Temporary failure"));
 

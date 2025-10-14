@@ -31,13 +31,13 @@ namespace SFA.DAS.EmployerFeedback.Jobs.Functions
 
                 var accountIdsResponse = await ExecuteWithRetry(async () =>
                 {
-                    _logger.LogDebug("Fetching employer account IDs");
-                    return await _api.GetEmployerAccountIds(_configuration.GenerateFeedbackTransactionsBatchSize);
+                    _logger.LogDebug("Fetching feedback transaction account IDs");
+                    return await _api.GetFeedbackTransactionAccountIds(_configuration.GenerateFeedbackTransactionsBatchSize);
                 }, MaxRetryAttempts, CancellationToken.None);
 
                 var accountIds = accountIdsResponse.AccountIds;
 
-                _logger.LogInformation("Retrieved {AccountCount} employer accounts for processing", accountIds.Count);
+                _logger.LogInformation("Retrieved {AccountCount} feedback transaction accounts for processing", accountIds.Count);
 
                 await ProcessAccountsInParallelAsync(accountIds, _configuration.GenerateFeedbackTransactionsMaxParallelism);
 
