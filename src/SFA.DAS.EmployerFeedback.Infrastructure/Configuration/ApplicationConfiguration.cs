@@ -6,5 +6,7 @@ namespace SFA.DAS.EmployerFeedback.Infrastructure.Configuration
     public class ApplicationConfiguration
     {
         public EmployerFeedbackOuterApiConfiguration EmployerFeedbackOuterApiConfiguration { get; set; }
+        public int GenerateFeedbackTransactionsMaxParallelism { get; set; }
+        public int GenerateFeedbackTransactionsBatchSize { get; set; }
     }
 }

@@ -71,6 +71,9 @@
         "generateFeedbackSummariesFunctionTimerSchedule": {
             "type": "string"
         },
+        "generateFeedbackTransactionsTimerSchedule": {
+            "type": "string"
+        },
         "sharedManagementResourceGroup": {
             "type": "string"
         },
@@ -300,6 +303,10 @@
                                 {
                                     "name": "GenerateFeedbackSummariesFunctionTimerSchedule",
                                     "value": "[parameters('generateFeedbackSummariesFunctionTimerSchedule')]"
+                                },
+                                {
+                                    "name": "GenerateFeedbackTransactionsTimerSchedule",
+                                    "value": "[parameters('generateFeedbackTransactionsTimerSchedule')]"
                                 }
                             ]
                         }
