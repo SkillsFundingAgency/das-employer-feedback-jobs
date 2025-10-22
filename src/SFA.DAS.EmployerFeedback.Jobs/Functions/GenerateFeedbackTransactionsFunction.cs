@@ -23,7 +23,7 @@ namespace SFA.DAS.EmployerFeedback.Jobs.Functions
         }
 
         [Function(nameof(GenerateFeedbackTransactionsTimer))]
-        public async Task GenerateFeedbackTransactionsTimer([TimerTrigger("%GenerateFeedbackTransactionsTimerSchedule%", RunOnStartup = true)] TimerInfo timer)
+        public async Task GenerateFeedbackTransactionsTimer([TimerTrigger("%GenerateFeedbackTransactionsTimerSchedule%", RunOnStartup = false)] TimerInfo timer)
         {
             try
             {
