@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Net.Http;
 using System.Threading.Tasks;
 using Microsoft.Azure.Functions.Worker;
@@ -10,6 +11,7 @@ using SFA.DAS.EmployerFeedback.Infrastructure.Api;
 using SFA.DAS.EmployerFeedback.Infrastructure.Configuration;
 using SFA.DAS.EmployerFeedback.Infrastructure.Models;
 using SFA.DAS.EmployerFeedback.Jobs.Functions;
+using SFA.DAS.EmployerFeedback.Jobs.Services;
 
 namespace SFA.DAS.EmployerFeedback.Jobs.UnitTests.Functions
 {
@@ -18,6 +20,7 @@ namespace SFA.DAS.EmployerFeedback.Jobs.UnitTests.Functions
     {
         private Mock<ILogger<ProcessFeedbackTransactionsEmailsFunction>> _loggerMock;
         private Mock<IEmployerFeedbackOuterApi> _apiMock;
+        private Mock<IWaveFanoutService> _waveFanoutServiceMock;
         private ApplicationConfiguration _configuration;
         private ProcessFeedbackTransactionsEmailsFunction _function;
         private const int MaxRetryAttempts = 3;
@@ -27,6 +30,7 @@ namespace SFA.DAS.EmployerFeedback.Jobs.UnitTests.Functions
         {
             _loggerMock = new Mock<ILogger<ProcessFeedbackTransactionsEmailsFunction>>();
             _apiMock = new Mock<IEmployerFeedbackOuterApi>();
+            _waveFanoutServiceMock = new Mock<IWaveFanoutService>();
             _configuration = new ApplicationConfiguration
             {
                 TriggerFeedbackEmailsBatchSize = 25,
@@ -42,7 +46,7 @@ namespace SFA.DAS.EmployerFeedback.Jobs.UnitTests.Functions
                 EmployerAccountsBaseUrl = "at-eas.apprenticeships.education.gov.uk",
                 EmployerFeedbackBaseUrl = "at-employer-feedback.apprenticeships.education.gov.uk"
             };
-            _function = new ProcessFeedbackTransactionsEmailsFunction(_loggerMock.Object, _apiMock.Object, _configuration);
+            _function = new ProcessFeedbackTransactionsEmailsFunction(_loggerMock.Object, _apiMock.Object, _configuration, _waveFanoutServiceMock.Object);
         }
 
         [Test]
@@ -56,10 +60,31 @@ namespace SFA.DAS.EmployerFeedback.Jobs.UnitTests.Functions
             _apiMock.Setup(x => x.TriggerFeedbackEmails(It.IsAny<long>(), It.IsAny<TriggerFeedbackEmailsRequest>()))
                    .Returns(Task.CompletedTask);
 
+            _waveFanoutServiceMock.Setup(x => x.ExecuteAsync(
+                It.IsAny<IEnumerable<long>>(),
+                It.IsAny<Func<long, Task<bool>>>(),
+                It.IsAny<int>(),
+                It.IsAny<int>()))
+                .Returns<IEnumerable<long>, Func<long, Task<bool>>, int, int>(
+                    async (items, func, perSecondCap, delay) =>
+                    {
+                        var results = new List<bool>();
+                        foreach (var item in items)
+                        {
+                            var result = await func(item);
+                            results.Add(result);
+                        }
+                        return results.AsReadOnly();
+                    });
+
             await _function.ProcessFeedbackTransactionsEmailsTimer(timerInfo);
 
             _apiMock.Verify(x => x.GetFeedbackTransactionsBatch(_configuration.TriggerFeedbackEmailsBatchSize), Times.Once);
+
             _apiMock.Verify(x => x.TriggerFeedbackEmails(It.IsAny<long>(), It.IsAny<TriggerFeedbackEmailsRequest>()), Times.Exactly(3));
+            _apiMock.Verify(x => x.TriggerFeedbackEmails(1, It.IsAny<TriggerFeedbackEmailsRequest>()), Times.Once);
+            _apiMock.Verify(x => x.TriggerFeedbackEmails(2, It.IsAny<TriggerFeedbackEmailsRequest>()), Times.Once);
+            _apiMock.Verify(x => x.TriggerFeedbackEmails(3, It.IsAny<TriggerFeedbackEmailsRequest>()), Times.Once);
 
             _loggerMock.Verify(x => x.Log(
                 LogLevel.Information,
@@ -71,7 +96,7 @@ namespace SFA.DAS.EmployerFeedback.Jobs.UnitTests.Functions
             _loggerMock.Verify(x => x.Log(
                 LogLevel.Information,
                 It.IsAny<EventId>(),
-                It.Is<It.IsAnyType>((v, t) => v.ToString().Contains("ProcessFeedbackTransactionsEmails completed")),
+                It.Is<It.IsAnyType>((v, t) => v.ToString().Contains("completed: 3 successful, 0 failed")),
                 null,
                 It.IsAny<Func<It.IsAnyType, Exception, string>>()), Times.Once);
         }
@@ -82,17 +107,22 @@ namespace SFA.DAS.EmployerFeedback.Jobs.UnitTests.Functions
             var timerInfo = (TimerInfo)Activator.CreateInstance(typeof(TimerInfo), true);
             var transactionIds = new List<long> { 1 };
             var response = new GetFeedbackTransactionsBatchResponse { FeedbackTransactions = transactionIds };
+            var expectedResults = new List<bool> { true }.AsReadOnly();
 
             _apiMock.SetupSequence(x => x.GetFeedbackTransactionsBatch(It.IsAny<int>()))
                 .ThrowsAsync(new HttpRequestException("Temporary error"))
                 .ReturnsAsync(response);
-            _apiMock.Setup(x => x.TriggerFeedbackEmails(It.IsAny<long>(), It.IsAny<TriggerFeedbackEmailsRequest>()))
-                   .Returns(Task.CompletedTask);
+
+            _waveFanoutServiceMock.Setup(x => x.ExecuteAsync(
+                It.IsAny<IEnumerable<long>>(),
+                It.IsAny<Func<long, Task<bool>>>(),
+                It.IsAny<int>(),
+                It.IsAny<int>()))
+                .ReturnsAsync(expectedResults);
 
             await _function.ProcessFeedbackTransactionsEmailsTimer(timerInfo);
 
             _apiMock.Verify(x => x.GetFeedbackTransactionsBatch(_configuration.TriggerFeedbackEmailsBatchSize), Times.Exactly(2));
-            _apiMock.Verify(x => x.TriggerFeedbackEmails(1, It.IsAny<TriggerFeedbackEmailsRequest>()), Times.Once);
 
             _loggerMock.Verify(x => x.Log(
                 LogLevel.Warning,
@@ -103,7 +133,7 @@ namespace SFA.DAS.EmployerFeedback.Jobs.UnitTests.Functions
         }
 
         [Test]
-        public async Task ProcessFeedbackTransactionsEmailsTimer_ProcessesInBatchesOf10()
+        public async Task ProcessFeedbackTransactionsEmailsTimer_ProcessesWithWaveFanout()
         {
             var timerInfo = (TimerInfo)Activator.CreateInstance(typeof(TimerInfo), true);
             var transactionIds = new List<long>();
@@ -119,62 +149,91 @@ namespace SFA.DAS.EmployerFeedback.Jobs.UnitTests.Functions
             _apiMock.Setup(x => x.TriggerFeedbackEmails(It.IsAny<long>(), It.IsAny<TriggerFeedbackEmailsRequest>()))
                    .Returns(Task.CompletedTask);
 
+            _waveFanoutServiceMock.Setup(x => x.ExecuteAsync(
+                It.IsAny<IEnumerable<long>>(),
+                It.IsAny<Func<long, Task<bool>>>(),
+                It.IsAny<int>(),
+                It.IsAny<int>()))
+                .Returns<IEnumerable<long>, Func<long, Task<bool>>, int, int>(
+                    async (items, func, perSecondCap, delay) =>
+                    {
+                        var results = new List<bool>();
+                        foreach (var item in items)
+                        {
+                            var result = await func(item);
+                            results.Add(result);
+                        }
+                        return results.AsReadOnly();
+                    });
+
             await _function.ProcessFeedbackTransactionsEmailsTimer(timerInfo);
+
+            _waveFanoutServiceMock.Verify(x => x.ExecuteAsync(
+                It.Is<IEnumerable<long>>(ids => ids.SequenceEqual(transactionIds)),
+                It.IsAny<Func<long, Task<bool>>>(),
+                _configuration.TriggerFeedbackEmailsMaxParallelism,
+                1000), Times.Once);
 
             _apiMock.Verify(x => x.TriggerFeedbackEmails(It.IsAny<long>(), It.IsAny<TriggerFeedbackEmailsRequest>()), Times.Exactly(25));
 
             _loggerMock.Verify(x => x.Log(
                 LogLevel.Information,
                 It.IsAny<EventId>(),
-                It.Is<It.IsAnyType>((v, t) => v.ToString().Contains("Processing 25 feedback transactions in batches of 10")),
-                null,
-                It.IsAny<Func<It.IsAnyType, Exception, string>>()), Times.Once);
-
-            _loggerMock.Verify(x => x.Log(
-                LogLevel.Information,
-                It.IsAny<EventId>(),
-                It.Is<It.IsAnyType>((v, t) => v.ToString().Contains("Processing batch 1 (10 transactions)")),
-                null,
-                It.IsAny<Func<It.IsAnyType, Exception, string>>()), Times.Once);
-
-            _loggerMock.Verify(x => x.Log(
-                LogLevel.Information,
-                It.IsAny<EventId>(),
-                It.Is<It.IsAnyType>((v, t) => v.ToString().Contains("Processing batch 3 (5 transactions)")),
+                It.Is<It.IsAnyType>((v, t) => v.ToString().Contains("Processing 25 feedback transactions with wave fanout (max 10 per second)")),
                 null,
                 It.IsAny<Func<It.IsAnyType, Exception, string>>()), Times.Once);
         }
 
         [Test]
-        public async Task ProcessFeedbackTransactionsEmailsTimer_WhenProcessingEmailFails_ContinuesWithOtherEmails()
+        public async Task ProcessFeedbackTransactionsEmailsTimer_WhenProcessingEmailFails_LogsErrorAndContinues()
         {
             var timerInfo = (TimerInfo)Activator.CreateInstance(typeof(TimerInfo), true);
             var transactionIds = new List<long> { 1, 2, 3 };
             var response = new GetFeedbackTransactionsBatchResponse { FeedbackTransactions = transactionIds };
 
             _apiMock.Setup(x => x.GetFeedbackTransactionsBatch(It.IsAny<int>())).ReturnsAsync(response);
+
             _apiMock.Setup(x => x.TriggerFeedbackEmails(2, It.IsAny<TriggerFeedbackEmailsRequest>()))
                 .ThrowsAsync(new Exception("Email sending failed"));
             _apiMock.Setup(x => x.TriggerFeedbackEmails(It.Is<long>(id => id != 2), It.IsAny<TriggerFeedbackEmailsRequest>()))
                    .Returns(Task.CompletedTask);
 
+            _waveFanoutServiceMock.Setup(x => x.ExecuteAsync(
+                It.IsAny<IEnumerable<long>>(),
+                It.IsAny<Func<long, Task<bool>>>(),
+                It.IsAny<int>(),
+                It.IsAny<int>()))
+                .Returns<IEnumerable<long>, Func<long, Task<bool>>, int, int>(
+                    async (items, func, perSecondCap, delay) =>
+                    {
+                        var results = new List<bool>();
+                        foreach (var item in items)
+                        {
+                            var result = await func(item);
+                            results.Add(result);
+                        }
+                        return results.AsReadOnly();
+                    });
+
             await _function.ProcessFeedbackTransactionsEmailsTimer(timerInfo);
 
             _apiMock.Verify(x => x.TriggerFeedbackEmails(1, It.IsAny<TriggerFeedbackEmailsRequest>()), Times.Once);
-            _apiMock.Verify(x => x.TriggerFeedbackEmails(2, It.IsAny<TriggerFeedbackEmailsRequest>()), Times.Exactly(MaxRetryAttempts));
             _apiMock.Verify(x => x.TriggerFeedbackEmails(3, It.IsAny<TriggerFeedbackEmailsRequest>()), Times.Once);
+
+
+            _apiMock.Verify(x => x.TriggerFeedbackEmails(2, It.IsAny<TriggerFeedbackEmailsRequest>()), Times.Exactly(MaxRetryAttempts));
 
             _loggerMock.Verify(x => x.Log(
                 LogLevel.Information,
                 It.IsAny<EventId>(),
-                It.Is<It.IsAnyType>((v, t) => v.ToString().Contains("ProcessFeedbackTransactionsEmails completed")),
+                It.Is<It.IsAnyType>((v, t) => v.ToString().Contains("completed: 2 successful, 1 failed")),
                 null,
                 It.IsAny<Func<It.IsAnyType, Exception, string>>()), Times.Once);
 
             _loggerMock.Verify(x => x.Log(
                 LogLevel.Error,
                 It.IsAny<EventId>(),
-                It.Is<It.IsAnyType>((v, t) => v.ToString().Contains("Failed to send email for transaction 2") && v.ToString().Contains("after 3 attempts")),
+                It.Is<It.IsAnyType>((v, t) => v.ToString().Contains("Email processing failed for transaction 2")),
                 It.IsAny<Exception>(),
                 It.IsAny<Func<It.IsAnyType, Exception, string>>()), Times.Once);
         }

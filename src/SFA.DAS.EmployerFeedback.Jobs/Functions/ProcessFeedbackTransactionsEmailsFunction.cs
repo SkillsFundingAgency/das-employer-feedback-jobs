@@ -3,6 +3,7 @@ using Microsoft.Extensions.Logging;
 using SFA.DAS.EmployerFeedback.Infrastructure.Api;
 using SFA.DAS.EmployerFeedback.Infrastructure.Configuration;
 using SFA.DAS.EmployerFeedback.Infrastructure.Models;
+using SFA.DAS.EmployerFeedback.Jobs.Services;
 
 namespace SFA.DAS.EmployerFeedback.Jobs.Functions
 {
@@ -11,16 +12,19 @@ namespace SFA.DAS.EmployerFeedback.Jobs.Functions
         private readonly ILogger<ProcessFeedbackTransactionsEmailsFunction> _logger;
         private readonly IEmployerFeedbackOuterApi _api;
         private readonly ApplicationConfiguration _configuration;
+        private readonly IWaveFanoutService _waveFanoutService;
         private const int MaxRetryAttempts = 3;
 
         public ProcessFeedbackTransactionsEmailsFunction(
             ILogger<ProcessFeedbackTransactionsEmailsFunction> logger,
             IEmployerFeedbackOuterApi api,
-            ApplicationConfiguration configuration)
+            ApplicationConfiguration configuration,
+            IWaveFanoutService waveFanoutService)
         {
             _logger = logger;
             _api = api;
             _configuration = configuration;
+            _waveFanoutService = waveFanoutService;
         }
 
         [Function(nameof(ProcessFeedbackTransactionsEmailsTimer))]
@@ -38,30 +42,20 @@ namespace SFA.DAS.EmployerFeedback.Jobs.Functions
 
                 var transactionIds = response.FeedbackTransactions;
 
-                _logger.LogInformation("Processing {Count} feedback transactions in batches of {BatchSize}",
+                _logger.LogInformation("Processing {Count} feedback transactions with wave fanout (max {MaxParallelism} per second)",
                     transactionIds.Count, _configuration.TriggerFeedbackEmailsMaxParallelism);
 
-                var totalProcessed = 0;
-                var totalFailed = 0;
+                var results = await _waveFanoutService.ExecuteAsync(
+                    transactionIds,
+                    ProcessSingleEmailAsync,
+                    _configuration.TriggerFeedbackEmailsMaxParallelism,
+                    1000);
 
-                for (int i = 0; i < transactionIds.Count; i += _configuration.TriggerFeedbackEmailsMaxParallelism)
-                {
-                    var batch = transactionIds.Skip(i).Take(_configuration.TriggerFeedbackEmailsMaxParallelism).ToList();
-                    var batchNumber = (i / _configuration.TriggerFeedbackEmailsMaxParallelism) + 1;
+                var successCount = results.Count(r => r);
+                var failureCount = results.Count - successCount;
 
-                    _logger.LogInformation("Processing batch {BatchNumber} ({Count} transactions)",
-                        batchNumber, batch.Count);
-
-                    var result = await ProcessBatch(batch, batchNumber);
-                    totalProcessed += result.processed;
-                    totalFailed += result.failed;
-
-                    _logger.LogInformation("Batch {BatchNumber} completed: {Processed} processed, {Failed} failed",
-                        batchNumber, result.processed, result.failed);
-                }
-
-                _logger.LogInformation("ProcessFeedbackTransactionsEmails completed: {TotalProcessed} processed, {TotalFailed} failed",
-                    totalProcessed, totalFailed);
+                _logger.LogInformation("ProcessFeedbackTransactionsEmails completed: {SuccessCount} successful, {FailureCount} failed",
+                    successCount, failureCount);
             }
             catch (Exception ex)
             {
@@ -70,50 +64,40 @@ namespace SFA.DAS.EmployerFeedback.Jobs.Functions
             }
         }
 
-        private async Task<(int processed, int failed)> ProcessBatch(List<long> transactionIds, int batchNumber)
+        private async Task<bool> ProcessSingleEmailAsync(long transactionId)
         {
-            var processed = 0;
-            var failed = 0;
-
-            var tasks = transactionIds.Select(async transactionId =>
+            try
             {
-                try
+                _logger.LogDebug("Starting email processing for transaction {TransactionId}", transactionId);
+
+                await ExecuteWithRetry(async () =>
                 {
-                    await ProcessSingleEmailAsync(transactionId);
-                    Interlocked.Increment(ref processed);
-                }
-                catch (Exception ex)
-                {
-                    Interlocked.Increment(ref failed);
-                    _logger.LogError(ex, "Failed to send email for transaction {TransactionId} in batch {BatchNumber} after {MaxRetryAttempts} attempts",
-                        transactionId, batchNumber, MaxRetryAttempts);
-                }
-            });
+                    var request = new TriggerFeedbackEmailsRequest
+                    {
+                        NotificationTemplates = _configuration.NotificationTemplates,
+                        EmployerAccountsBaseUrl = _configuration.EmployerAccountsBaseUrl,
+                        EmployerFeedbackBaseUrl = _configuration.EmployerFeedbackBaseUrl
+                    };
 
-            await Task.WhenAll(tasks);
-            return (processed, failed);
-        }
+                    _logger.LogDebug("Sending email for transaction {TransactionId} with templates: {@Templates} and base URL: {BaseUrl}",
+                        transactionId, request.NotificationTemplates, request.EmployerAccountsBaseUrl);
 
-        private async Task ProcessSingleEmailAsync(long transactionId)
-        {
-            await ExecuteWithRetry(async () =>
-            {
-                var request = new TriggerFeedbackEmailsRequest
-                {
-                    NotificationTemplates = _configuration.NotificationTemplates,
-                    EmployerAccountsBaseUrl = _configuration.EmployerAccountsBaseUrl,
-                    EmployerFeedbackBaseUrl = _configuration.EmployerFeedbackBaseUrl
-                };
+                    await _api.TriggerFeedbackEmails(transactionId, request);
 
-                _logger.LogDebug("Sending email for transaction {TransactionId} with templates: {@Templates} and base URL: {BaseUrl}",
-                    transactionId, request.NotificationTemplates, request.EmployerAccountsBaseUrl);
+                    _logger.LogDebug("Successfully sent email for transaction {TransactionId}", transactionId);
 
-                await _api.TriggerFeedbackEmails(transactionId, request);
+                    return true;
+                }, MaxRetryAttempts, CancellationToken.None);
 
-                _logger.LogDebug("Successfully sent email for transaction {TransactionId}", transactionId);
-
+                _logger.LogInformation("Successfully completed email processing for transaction {TransactionId}", transactionId);
                 return true;
-            }, MaxRetryAttempts, CancellationToken.None);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Email processing failed for transaction {TransactionId}: {ErrorMessage}",
+                    transactionId, ex.Message);
+                return false;
+            }
         }
 
         private async Task<T> ExecuteWithRetry<T>(Func<Task<T>> func, int maxAttempts, CancellationToken cancellationToken)
