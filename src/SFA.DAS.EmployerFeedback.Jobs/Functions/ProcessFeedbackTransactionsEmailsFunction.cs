@@ -28,7 +28,7 @@ namespace SFA.DAS.EmployerFeedback.Jobs.Functions
         }
 
         [Function(nameof(ProcessFeedbackTransactionsEmailsTimer))]
-        public async Task ProcessFeedbackTransactionsEmailsTimer([TimerTrigger("%ProcessFeedbackTransactionsEmailsSchedule%", RunOnStartup = true)] TimerInfo timer)
+        public async Task ProcessFeedbackTransactionsEmailsTimer([TimerTrigger("%ProcessFeedbackTransactionsEmailsSchedule%", RunOnStartup = false)] TimerInfo timer)
         {
             try
             {
