@@ -24,7 +24,7 @@ namespace SFA.DAS.EmployerFeedback.Jobs.Functions
         }
 
         [Function(nameof(ProcessFeedbackTransactionsEmailsTimer))]
-        public async Task ProcessFeedbackTransactionsEmailsTimer([TimerTrigger("%ProcessFeedbackTransactionsEmailsSchedule%", RunOnStartup = true)] TimerInfo timer)
+        public async Task ProcessFeedbackTransactionsEmailsTimer([TimerTrigger("%ProcessFeedbackTransactionsEmailsSchedule%", RunOnStartup = false)] TimerInfo timer)
         {
             try
             {
@@ -58,6 +58,11 @@ namespace SFA.DAS.EmployerFeedback.Jobs.Functions
 
                     _logger.LogInformation("Batch {BatchNumber} completed: {Processed} processed, {Failed} failed",
                         batchNumber, result.processed, result.failed);
+
+                    if (i + _configuration.TriggerFeedbackEmailsMaxParallelism < transactionIds.Count)
+                    {
+                        await Task.Delay(1000);
+                    }
                 }
 
                 _logger.LogInformation("ProcessFeedbackTransactionsEmails completed: {TotalProcessed} processed, {TotalFailed} failed",
