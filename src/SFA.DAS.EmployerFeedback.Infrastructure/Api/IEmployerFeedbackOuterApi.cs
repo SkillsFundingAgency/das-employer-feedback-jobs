@@ -21,6 +21,6 @@ namespace SFA.DAS.EmployerFeedback.Infrastructure.Api
         Task<GetFeedbackTransactionsBatchResponse> GetFeedbackTransactionsBatch([Query] int batchsize);
 
         [Post("/feedbacktransactions/{id}/send")]
-        Task TriggerFeedbackEmails([Path] long id, [Body] TriggerFeedbackEmailsRequest request);
+        Task SendFeedbackEmails([Path] long id, [Body] SendFeedbackEmailsRequest request);
     }
 }

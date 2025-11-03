@@ -37,18 +37,18 @@ namespace SFA.DAS.EmployerFeedback.Jobs.Functions
                 var response = await ExecuteWithRetry(async () =>
                 {
                     _logger.LogDebug("Fetching feedback transactions to email");
-                    return await _api.GetFeedbackTransactionsBatch(_configuration.TriggerFeedbackEmailsBatchSize);
+                    return await _api.GetFeedbackTransactionsBatch(_configuration.ProcessFeedbackEmailsBatchSize);
                 }, MaxRetryAttempts, CancellationToken.None);
 
                 var transactionIds = response.FeedbackTransactions;
 
                 _logger.LogInformation("Processing {Count} feedback transactions with wave fanout (max {MaxParallelism} per second)",
-                    transactionIds.Count, _configuration.TriggerFeedbackEmailsMaxParallelism);
+                    transactionIds.Count, _configuration.ProcessFeedbackEmailsMaxParallelism);
 
                 var results = await _waveFanoutService.ExecuteAsync(
                     transactionIds,
                     ProcessSingleEmailAsync,
-                    _configuration.TriggerFeedbackEmailsMaxParallelism,
+                    _configuration.ProcessFeedbackEmailsMaxParallelism,
                     1000);
 
                 var successCount = results.Count(r => r);
@@ -72,7 +72,7 @@ namespace SFA.DAS.EmployerFeedback.Jobs.Functions
 
                 await ExecuteWithRetry(async () =>
                 {
-                    var request = new TriggerFeedbackEmailsRequest
+                    var request = new SendFeedbackEmailsRequest
                     {
                         NotificationTemplates = _configuration.NotificationTemplates,
                         EmployerAccountsBaseUrl = _configuration.EmployerAccountsBaseUrl,
@@ -82,7 +82,7 @@ namespace SFA.DAS.EmployerFeedback.Jobs.Functions
                     _logger.LogDebug("Sending email for transaction {TransactionId} with templates: {@Templates} and base URL: {BaseUrl}",
                         transactionId, request.NotificationTemplates, request.EmployerAccountsBaseUrl);
 
-                    await _api.TriggerFeedbackEmails(transactionId, request);
+                    await _api.SendFeedbackEmails(transactionId, request);
 
                     _logger.LogDebug("Successfully sent email for transaction {TransactionId}", transactionId);
 
