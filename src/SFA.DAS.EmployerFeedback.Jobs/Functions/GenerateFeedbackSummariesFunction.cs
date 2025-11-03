@@ -4,14 +4,14 @@ using SFA.DAS.EmployerFeedback.Infrastructure.Api;
 
 namespace SFA.DAS.EmployerFeedback.Jobs.Functions
 {
-    public class GenerateFeedbackSummariesFunction
+    public class GenerateFeedbackSummariesFunction : BaseFunction<GenerateFeedbackSummariesFunction>
     {
-        private readonly ILogger<GenerateFeedbackSummariesFunction> _logger;
         private readonly IEmployerFeedbackOuterApi _api;
 
-        public GenerateFeedbackSummariesFunction(ILogger<GenerateFeedbackSummariesFunction> log, IEmployerFeedbackOuterApi api)
+        public GenerateFeedbackSummariesFunction(
+            ILogger<GenerateFeedbackSummariesFunction> logger,
+            IEmployerFeedbackOuterApi api) : base(logger)
         {
-            _logger = log;
             _api = api;
         }
 
@@ -20,13 +20,13 @@ namespace SFA.DAS.EmployerFeedback.Jobs.Functions
         {
             try
             {
-                _logger.LogInformation("GenerateFeedbackSummariesFunctionTimer has started");
+                Logger.LogInformation("GenerateFeedbackSummariesFunctionTimer has started");
                 await _api.GenerateFeedbackSummaries();
-                _logger.LogInformation("GenerateFeedbackSummariesFunctionTimer has finished");
+                Logger.LogInformation("GenerateFeedbackSummariesFunctionTimer has finished");
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "GenerateFeedbackSummariesFunctionTimer has failed");
+                Logger.LogError(ex, "GenerateFeedbackSummariesFunctionTimer has failed");
                 throw;
             }
         }
