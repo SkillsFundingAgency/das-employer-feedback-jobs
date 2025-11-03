@@ -29,8 +29,8 @@ namespace SFA.DAS.EmployerFeedback.Jobs.UnitTests.Functions
             _apiMock = new Mock<IEmployerFeedbackOuterApi>();
             _configuration = new ApplicationConfiguration
             {
-                TriggerFeedbackEmailsBatchSize = 25,
-                TriggerFeedbackEmailsMaxParallelism = 10,
+                ProcessFeedbackEmailsBatchSize = 25,
+                ProcessFeedbackEmailsMaxParallelism = 10,
                 NotificationTemplates = new List<NotificationTemplate>
                 {
                     new NotificationTemplate
@@ -53,13 +53,13 @@ namespace SFA.DAS.EmployerFeedback.Jobs.UnitTests.Functions
             var response = new GetFeedbackTransactionsBatchResponse { FeedbackTransactions = transactionIds };
 
             _apiMock.Setup(x => x.GetFeedbackTransactionsBatch(It.IsAny<int>())).ReturnsAsync(response);
-            _apiMock.Setup(x => x.TriggerFeedbackEmails(It.IsAny<long>(), It.IsAny<TriggerFeedbackEmailsRequest>()))
+            _apiMock.Setup(x => x.SendFeedbackEmails(It.IsAny<long>(), It.IsAny<SendFeedbackEmailsRequest>()))
                    .Returns(Task.CompletedTask);
 
             await _function.ProcessFeedbackTransactionsEmailsTimer(timerInfo);
 
-            _apiMock.Verify(x => x.GetFeedbackTransactionsBatch(_configuration.TriggerFeedbackEmailsBatchSize), Times.Once);
-            _apiMock.Verify(x => x.TriggerFeedbackEmails(It.IsAny<long>(), It.IsAny<TriggerFeedbackEmailsRequest>()), Times.Exactly(3));
+            _apiMock.Verify(x => x.GetFeedbackTransactionsBatch(_configuration.ProcessFeedbackEmailsBatchSize), Times.Once);
+            _apiMock.Verify(x => x.SendFeedbackEmails(It.IsAny<long>(), It.IsAny<SendFeedbackEmailsRequest>()), Times.Exactly(3));
 
             _loggerMock.Verify(x => x.Log(
                 LogLevel.Information,
@@ -86,13 +86,13 @@ namespace SFA.DAS.EmployerFeedback.Jobs.UnitTests.Functions
             _apiMock.SetupSequence(x => x.GetFeedbackTransactionsBatch(It.IsAny<int>()))
                 .ThrowsAsync(new HttpRequestException("Temporary error"))
                 .ReturnsAsync(response);
-            _apiMock.Setup(x => x.TriggerFeedbackEmails(It.IsAny<long>(), It.IsAny<TriggerFeedbackEmailsRequest>()))
+            _apiMock.Setup(x => x.SendFeedbackEmails(It.IsAny<long>(), It.IsAny<SendFeedbackEmailsRequest>()))
                    .Returns(Task.CompletedTask);
 
             await _function.ProcessFeedbackTransactionsEmailsTimer(timerInfo);
 
-            _apiMock.Verify(x => x.GetFeedbackTransactionsBatch(_configuration.TriggerFeedbackEmailsBatchSize), Times.Exactly(2));
-            _apiMock.Verify(x => x.TriggerFeedbackEmails(1, It.IsAny<TriggerFeedbackEmailsRequest>()), Times.Once);
+            _apiMock.Verify(x => x.GetFeedbackTransactionsBatch(_configuration.ProcessFeedbackEmailsBatchSize), Times.Exactly(2));
+            _apiMock.Verify(x => x.SendFeedbackEmails(1, It.IsAny<SendFeedbackEmailsRequest>()), Times.Once);
 
             _loggerMock.Verify(x => x.Log(
                 LogLevel.Warning,
@@ -116,12 +116,12 @@ namespace SFA.DAS.EmployerFeedback.Jobs.UnitTests.Functions
             var response = new GetFeedbackTransactionsBatchResponse { FeedbackTransactions = transactionIds };
 
             _apiMock.Setup(x => x.GetFeedbackTransactionsBatch(It.IsAny<int>())).ReturnsAsync(response);
-            _apiMock.Setup(x => x.TriggerFeedbackEmails(It.IsAny<long>(), It.IsAny<TriggerFeedbackEmailsRequest>()))
+            _apiMock.Setup(x => x.SendFeedbackEmails(It.IsAny<long>(), It.IsAny<SendFeedbackEmailsRequest>()))
                    .Returns(Task.CompletedTask);
 
             await _function.ProcessFeedbackTransactionsEmailsTimer(timerInfo);
 
-            _apiMock.Verify(x => x.TriggerFeedbackEmails(It.IsAny<long>(), It.IsAny<TriggerFeedbackEmailsRequest>()), Times.Exactly(25));
+            _apiMock.Verify(x => x.SendFeedbackEmails(It.IsAny<long>(), It.IsAny<SendFeedbackEmailsRequest>()), Times.Exactly(25));
 
             _loggerMock.Verify(x => x.Log(
                 LogLevel.Information,
@@ -153,16 +153,16 @@ namespace SFA.DAS.EmployerFeedback.Jobs.UnitTests.Functions
             var response = new GetFeedbackTransactionsBatchResponse { FeedbackTransactions = transactionIds };
 
             _apiMock.Setup(x => x.GetFeedbackTransactionsBatch(It.IsAny<int>())).ReturnsAsync(response);
-            _apiMock.Setup(x => x.TriggerFeedbackEmails(2, It.IsAny<TriggerFeedbackEmailsRequest>()))
+            _apiMock.Setup(x => x.SendFeedbackEmails(2, It.IsAny<SendFeedbackEmailsRequest>()))
                 .ThrowsAsync(new Exception("Email sending failed"));
-            _apiMock.Setup(x => x.TriggerFeedbackEmails(It.Is<long>(id => id != 2), It.IsAny<TriggerFeedbackEmailsRequest>()))
+            _apiMock.Setup(x => x.SendFeedbackEmails(It.Is<long>(id => id != 2), It.IsAny<SendFeedbackEmailsRequest>()))
                    .Returns(Task.CompletedTask);
 
             await _function.ProcessFeedbackTransactionsEmailsTimer(timerInfo);
 
-            _apiMock.Verify(x => x.TriggerFeedbackEmails(1, It.IsAny<TriggerFeedbackEmailsRequest>()), Times.Once);
-            _apiMock.Verify(x => x.TriggerFeedbackEmails(2, It.IsAny<TriggerFeedbackEmailsRequest>()), Times.Exactly(MaxRetryAttempts));
-            _apiMock.Verify(x => x.TriggerFeedbackEmails(3, It.IsAny<TriggerFeedbackEmailsRequest>()), Times.Once);
+            _apiMock.Verify(x => x.SendFeedbackEmails(1, It.IsAny<SendFeedbackEmailsRequest>()), Times.Once);
+            _apiMock.Verify(x => x.SendFeedbackEmails(2, It.IsAny<SendFeedbackEmailsRequest>()), Times.Exactly(MaxRetryAttempts));
+            _apiMock.Verify(x => x.SendFeedbackEmails(3, It.IsAny<SendFeedbackEmailsRequest>()), Times.Once);
 
             _loggerMock.Verify(x => x.Log(
                 LogLevel.Information,

@@ -33,21 +33,21 @@ namespace SFA.DAS.EmployerFeedback.Jobs.Functions
                 var response = await ExecuteWithRetry(async () =>
                 {
                     _logger.LogDebug("Fetching feedback transactions to email");
-                    return await _api.GetFeedbackTransactionsBatch(_configuration.TriggerFeedbackEmailsBatchSize);
+                    return await _api.GetFeedbackTransactionsBatch(_configuration.ProcessFeedbackEmailsBatchSize);
                 }, MaxRetryAttempts, CancellationToken.None);
 
                 var transactionIds = response.FeedbackTransactions;
 
                 _logger.LogInformation("Processing {Count} feedback transactions in batches of {BatchSize}",
-                    transactionIds.Count, _configuration.TriggerFeedbackEmailsMaxParallelism);
+                    transactionIds.Count, _configuration.ProcessFeedbackEmailsMaxParallelism);
 
                 var totalProcessed = 0;
                 var totalFailed = 0;
 
-                for (int i = 0; i < transactionIds.Count; i += _configuration.TriggerFeedbackEmailsMaxParallelism)
+                for (int i = 0; i < transactionIds.Count; i += _configuration.ProcessFeedbackEmailsMaxParallelism)
                 {
-                    var batch = transactionIds.Skip(i).Take(_configuration.TriggerFeedbackEmailsMaxParallelism).ToList();
-                    var batchNumber = (i / _configuration.TriggerFeedbackEmailsMaxParallelism) + 1;
+                    var batch = transactionIds.Skip(i).Take(_configuration.ProcessFeedbackEmailsMaxParallelism).ToList();
+                    var batchNumber = (i / _configuration.ProcessFeedbackEmailsMaxParallelism) + 1;
 
                     _logger.LogInformation("Processing batch {BatchNumber} ({Count} transactions)",
                         batchNumber, batch.Count);
@@ -59,7 +59,7 @@ namespace SFA.DAS.EmployerFeedback.Jobs.Functions
                     _logger.LogInformation("Batch {BatchNumber} completed: {Processed} processed, {Failed} failed",
                         batchNumber, result.processed, result.failed);
 
-                    if (i + _configuration.TriggerFeedbackEmailsMaxParallelism < transactionIds.Count)
+                    if (i + _configuration.ProcessFeedbackEmailsMaxParallelism < transactionIds.Count)
                     {
                         await Task.Delay(1000);
                     }
@@ -103,7 +103,7 @@ namespace SFA.DAS.EmployerFeedback.Jobs.Functions
         {
             await ExecuteWithRetry(async () =>
             {
-                var request = new TriggerFeedbackEmailsRequest
+                var request = new SendFeedbackEmailsRequest
                 {
                     NotificationTemplates = _configuration.NotificationTemplates,
                     EmployerAccountsBaseUrl = _configuration.EmployerAccountsBaseUrl,
@@ -113,7 +113,7 @@ namespace SFA.DAS.EmployerFeedback.Jobs.Functions
                 _logger.LogDebug("Sending email for transaction {TransactionId} with templates: {@Templates} and base URL: {BaseUrl}",
                     transactionId, request.NotificationTemplates, request.EmployerAccountsBaseUrl);
 
-                await _api.TriggerFeedbackEmails(transactionId, request);
+                await _api.SendFeedbackEmails(transactionId, request);
 
                 _logger.LogDebug("Successfully sent email for transaction {TransactionId}", transactionId);
 

@@ -3,7 +3,7 @@ using SFA.DAS.EmployerFeedback.Infrastructure.Configuration;
 
 namespace SFA.DAS.EmployerFeedback.Infrastructure.Models
 {
-    public class TriggerFeedbackEmailsRequest
+    public class SendFeedbackEmailsRequest
     {
         public List<NotificationTemplate> NotificationTemplates { get; set; } = new List<NotificationTemplate>();
 
