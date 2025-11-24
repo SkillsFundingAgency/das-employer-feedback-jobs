@@ -29,7 +29,7 @@ namespace SFA.DAS.EmployerFeedback.Jobs.Functions
         }
 
         [Function(nameof(ProcessFeedbackTransactionsEmailsTimer))]
-        public async Task ProcessFeedbackTransactionsEmailsTimer([TimerTrigger("%ProcessFeedbackTransactionsEmailsSchedule%", RunOnStartup = true)] TimerInfo timer)
+        public async Task ProcessFeedbackTransactionsEmailsTimer([TimerTrigger("%ProcessFeedbackTransactionsEmailsSchedule%", RunOnStartup = false)] TimerInfo timer)
         {
             try
             {
@@ -101,8 +101,7 @@ namespace SFA.DAS.EmployerFeedback.Jobs.Functions
                 {
                     TemplateId = templateId,
                     Contact = user.Name,
-                    //Email = user.Email,
-                    Email = "ratheesh.ri@education.uk",
+                    Email = user.Email,
                     EmployerName = usersResponse.AccountName,
                     AccountHashedId = accountHashedId,
                     AccountsBaseUrl = _configuration.EmployerAccountsBaseUrl,
