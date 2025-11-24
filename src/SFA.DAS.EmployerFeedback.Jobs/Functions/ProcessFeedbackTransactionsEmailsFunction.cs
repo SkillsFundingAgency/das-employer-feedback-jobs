@@ -4,6 +4,7 @@ using SFA.DAS.EmployerFeedback.Infrastructure.Api;
 using SFA.DAS.EmployerFeedback.Infrastructure.Configuration;
 using SFA.DAS.EmployerFeedback.Infrastructure.Models;
 using SFA.DAS.EmployerFeedback.Jobs.Services;
+using SFA.DAS.Encoding;
 
 namespace SFA.DAS.EmployerFeedback.Jobs.Functions
 {
@@ -12,20 +13,23 @@ namespace SFA.DAS.EmployerFeedback.Jobs.Functions
         private readonly IEmployerFeedbackOuterApi _api;
         private readonly ApplicationConfiguration _configuration;
         private readonly IWaveFanoutService _waveFanoutService;
+        private readonly IEncodingService _encodingService;
 
         public ProcessFeedbackTransactionsEmailsFunction(
             ILogger<ProcessFeedbackTransactionsEmailsFunction> logger,
             IEmployerFeedbackOuterApi api,
             ApplicationConfiguration configuration,
-            IWaveFanoutService waveFanoutService) : base(logger)
+            IWaveFanoutService waveFanoutService,
+            IEncodingService encodingService) : base(logger)
         {
             _api = api;
             _configuration = configuration;
             _waveFanoutService = waveFanoutService;
+            _encodingService = encodingService;
         }
 
         [Function(nameof(ProcessFeedbackTransactionsEmailsTimer))]
-        public async Task ProcessFeedbackTransactionsEmailsTimer([TimerTrigger("%ProcessFeedbackTransactionsEmailsSchedule%", RunOnStartup = false)] TimerInfo timer)
+        public async Task ProcessFeedbackTransactionsEmailsTimer([TimerTrigger("%ProcessFeedbackTransactionsEmailsSchedule%", RunOnStartup = true)] TimerInfo timer)
         {
             try
             {
@@ -39,14 +43,14 @@ namespace SFA.DAS.EmployerFeedback.Jobs.Functions
 
                 var transactionIds = response.FeedbackTransactions;
 
-                Logger.LogInformation("Processing {Count} feedback transactions with wave fanout (max {MaxParallelism} per second)",
-                    transactionIds.Count, _configuration.ProcessFeedbackEmailsMaxParallelism);
+                Logger.LogInformation("Processing {Count} feedback transactions sequentially", transactionIds.Count);
 
-                var results = await _waveFanoutService.ExecuteAsync(
-                    transactionIds,
-                    ProcessSingleEmailAsync,
-                    _configuration.ProcessFeedbackEmailsMaxParallelism,
-                    1000);
+                var results = new List<bool>();
+                foreach (var transactionId in transactionIds)
+                {
+                    var result = await ProcessSingleFeedbackTransactionAsync(transactionId);
+                    results.Add(result);
+                }
 
                 var successCount = results.Count(r => r);
                 var failureCount = results.Count - successCount;
@@ -61,40 +65,139 @@ namespace SFA.DAS.EmployerFeedback.Jobs.Functions
             }
         }
 
-        private async Task<bool> ProcessSingleEmailAsync(long transactionId)
+        private async Task<bool> ProcessSingleFeedbackTransactionAsync(long transactionId)
         {
             try
             {
-                Logger.LogDebug("Starting email processing for transaction {TransactionId}", transactionId);
+                Logger.LogDebug("Starting processing for feedback transaction {TransactionId}", transactionId);
 
-                await ExecuteWithRetry(async () =>
+                var usersResponse = await ExecuteWithRetry(async () =>
                 {
-                    var request = new SendFeedbackEmailsRequest
-                    {
-                        NotificationTemplates = _configuration.NotificationTemplates,
-                        EmployerAccountsBaseUrl = _configuration.EmployerAccountsBaseUrl,
-                        EmployerFeedbackBaseUrl = _configuration.EmployerFeedbackBaseUrl
-                    };
-
-                    Logger.LogDebug("Sending email for transaction {TransactionId} with templates: {@Templates} and base URL: {BaseUrl}",
-                        transactionId, request.NotificationTemplates, request.EmployerAccountsBaseUrl);
-
-                    await _api.SendFeedbackEmails(transactionId, request);
-
-                    Logger.LogDebug("Successfully sent email for transaction {TransactionId}", transactionId);
-
-                    return true;
+                    Logger.LogDebug("Getting users for feedback transaction {TransactionId}", transactionId);
+                    return await _api.GetFeedbackTransactionUsers(transactionId);
                 }, MaxRetryAttempts, CancellationToken.None);
 
-                Logger.LogInformation("Successfully completed email processing for transaction {TransactionId}", transactionId);
+                if (usersResponse.Users == null || !usersResponse.Users.Any())
+                {
+                    Logger.LogInformation("No users found for feedback transaction {TransactionId}", transactionId);
+                    await UpdateFeedbackTransactionAsync(transactionId, usersResponse.TemplateName, 0);
+                    return true;
+                }
+
+                Logger.LogInformation("Found {UserCount} users for feedback transaction {TransactionId}",
+                    usersResponse.Users.Count, transactionId);
+
+                var templateId = GetTemplateIdFromName(usersResponse.TemplateName);
+
+                if (templateId == Guid.Empty)
+                {
+                    Logger.LogError("Template not found for name: {TemplateName}", usersResponse.TemplateName);
+                    return false;
+                }
+
+                var accountHashedId = _encodingService.Encode(usersResponse.AccountId, Encoding.EncodingType.AccountId);
+
+                var emailRequests = usersResponse.Users.Select(user => new SendFeedbackEmailRequest
+                {
+                    TemplateId = templateId,
+                    Contact = user.Name,
+                    //Email = user.Email,
+                    Email = "ratheesh.ri@education.uk",
+                    EmployerName = usersResponse.AccountName,
+                    AccountHashedId = accountHashedId,
+                    AccountsBaseUrl = _configuration.EmployerAccountsBaseUrl,
+                    FeedbackBaseUrl = _configuration.EmployerFeedbackBaseUrl
+                }).ToList();
+
+                Logger.LogInformation("Sending {EmailCount} emails for transaction {TransactionId} with throttling (max 10 per second)",
+                    emailRequests.Count, transactionId);
+
+                var emailResults = await _waveFanoutService.ExecuteAsync(
+                    emailRequests,
+                    SendSingleEmailAsync,
+                   _configuration.ProcessFeedbackEmailsMaxParallelism,
+                    1000);
+
+                var sentCount = emailResults.Count(r => r);
+                var failedCount = emailResults.Count - sentCount;
+
+                Logger.LogInformation("Email sending completed for transaction {TransactionId}: {SentCount} sent, {FailedCount} failed",
+                    transactionId, sentCount, failedCount);
+
+                await UpdateFeedbackTransactionAsync(transactionId, usersResponse.TemplateName, sentCount);
+
+                Logger.LogInformation("Successfully completed processing for feedback transaction {TransactionId}. Sent {SentCount} emails",
+                    transactionId, sentCount);
                 return true;
             }
             catch (Exception ex)
             {
-                Logger.LogError(ex, "Email processing failed for transaction {TransactionId}: {ErrorMessage}", 
+                Logger.LogError(ex, "Processing failed for feedback transaction {TransactionId}: {ErrorMessage}",
                     transactionId, ex.Message);
                 return false;
             }
+        }
+
+        private async Task<bool> SendSingleEmailAsync(SendFeedbackEmailRequest emailRequest)
+        {
+            try
+            {
+                await ExecuteWithRetry(async () =>
+                {
+                    Logger.LogDebug("Sending email to {Contact} with template {TemplateId}",
+                        emailRequest.Contact, emailRequest.TemplateId);
+                    await _api.SendFeedbackEmail(emailRequest);
+                    return true;
+                }, MaxRetryAttempts, CancellationToken.None);
+
+                Logger.LogDebug("Successfully sent email to {Contact}", emailRequest.Contact);
+                return true;
+            }
+            catch (Exception ex)
+            {
+                Logger.LogError(ex, "Failed to send email to {Contact}: {ErrorMessage}",
+                    emailRequest.Contact, ex.Message);
+                return false;
+            }
+        }
+
+        private async Task UpdateFeedbackTransactionAsync(long transactionId, string templateName, int sentCount)
+        {
+            try
+            {
+                var templateId = GetTemplateIdFromName(templateName);
+
+                var updateRequest = new UpdateFeedbackTransactionRequest
+                {
+                    TemplateId = templateId,
+                    SentCount = sentCount,
+                    SentDate = DateTime.UtcNow
+                };
+
+                await ExecuteWithRetry(async () =>
+                {
+                    Logger.LogDebug("Updating feedback transaction {TransactionId} with sent count {SentCount}",
+                        transactionId, sentCount);
+                    await _api.UpdateFeedbackTransaction(transactionId, updateRequest);
+                    return true;
+                }, MaxRetryAttempts, CancellationToken.None);
+
+                Logger.LogDebug("Successfully updated feedback transaction {TransactionId}", transactionId);
+            }
+            catch (Exception ex)
+            {
+                Logger.LogError(ex, "Failed to update feedback transaction {TransactionId}: {ErrorMessage}",
+                    transactionId, ex.Message);
+                throw;
+            }
+        }
+
+        private Guid GetTemplateIdFromName(string templateName)
+        {
+            var template = _configuration.NotificationTemplates
+                .FirstOrDefault(t => t.TemplateName.Equals(templateName, StringComparison.OrdinalIgnoreCase));
+
+            return template?.TemplateId ?? Guid.Empty;
         }
     }
 }
