@@ -95,15 +95,15 @@
             "type": "string"
         }
     },
-  "variables": {
-    "deploymentUrlBase": "https://raw.githubusercontent.com/SkillsFundingAgency/das-platform-building-blocks/master/templates/",
-    "resourceNamePrefix": "[toLower(concat('das-', parameters('resourceEnvironmentName'),'-', parameters('serviceName')))]",
-    "resourceGroupName": "[concat(variables('resourceNamePrefix'), '-rg')]",
-    "functionAppName": "[concat(variables('resourceNamePrefix'), '-fa')]",
-    "appServicePlanName": "[concat(variables('resourceNamePrefix'), '-asp')]",
-    "privateLinkScopeName": "[toLower(concat('das-', parameters('resourceEnvironmentName'),'-shared-ampls'))]",
-    "configNames": "SFA.DAS.EmployerFeedback.Jobs,SFA.DAS.Encoding"
-  },
+    "variables": {
+        "deploymentUrlBase": "https://raw.githubusercontent.com/SkillsFundingAgency/das-platform-building-blocks/master/templates/",
+        "resourceNamePrefix": "[toLower(concat('das-', parameters('resourceEnvironmentName'),'-', parameters('serviceName')))]",
+        "resourceGroupName": "[concat(variables('resourceNamePrefix'), '-rg')]",
+        "functionAppName": "[concat(variables('resourceNamePrefix'), '-fa')]",
+        "appServicePlanName": "[concat(variables('resourceNamePrefix'), '-asp')]",
+        "privateLinkScopeName": "[toLower(concat('das-', parameters('resourceEnvironmentName'),'-shared-ampls'))]",
+        "configNames": "SFA.DAS.EmployerFeedback.Jobs,SFA.DAS.Encoding"
+    },
     "resources": [
         {
             "apiVersion": "2021-04-01",
