@@ -3,6 +3,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using SFA.DAS.Configuration.AzureTableStorage;
 using SFA.DAS.EmployerFeedback.Infrastructure.Configuration;
+using SFA.DAS.Encoding;
 using System.Diagnostics.CodeAnalysis;
 
 namespace SFA.DAS.EmployerFeedback.Jobs.Extensions
@@ -35,6 +36,14 @@ namespace SFA.DAS.EmployerFeedback.Jobs.Extensions
                     configuration.Bind(settings));
 
             services.AddSingleton(s => s.GetRequiredService<IOptions<ApplicationConfiguration>>().Value);
+
+            services.AddSingleton(s =>
+            {
+                var configuration = s.GetRequiredService<IConfiguration>();
+                var dasEncodingConfig = new EncodingConfig { Encodings = [] };
+                configuration.GetSection(nameof(dasEncodingConfig.Encodings)).Bind(dasEncodingConfig.Encodings);
+                return dasEncodingConfig;
+            });
 
             return services;
         }

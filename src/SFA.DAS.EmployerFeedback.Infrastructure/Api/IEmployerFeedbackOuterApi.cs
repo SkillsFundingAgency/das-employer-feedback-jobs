@@ -20,7 +20,13 @@ namespace SFA.DAS.EmployerFeedback.Infrastructure.Api
         [Get("/feedbacktransactions")]
         Task<GetFeedbackTransactionsBatchResponse> GetFeedbackTransactionsBatch([Query] int batchsize);
 
-        [Post("/feedbacktransactions/{id}/send")]
-        Task SendFeedbackEmails([Path] long id, [Body] SendFeedbackEmailsRequest request);
+        [Get("/feedbacktransactions/{id}/users")]
+        Task<GetFeedbackTransactionUsersResponse> GetFeedbackTransactionUsers([Path] long id);
+
+        [Post("/feedbacktransactions/send")]
+        Task SendFeedbackEmail([Body] SendFeedbackEmailRequest request);
+
+        [Put("/feedbacktransactions/{id}")]
+        Task UpdateFeedbackTransaction([Path] long id, [Body] UpdateFeedbackTransactionRequest request);
     }
 }

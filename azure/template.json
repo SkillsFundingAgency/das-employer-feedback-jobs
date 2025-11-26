@@ -102,7 +102,7 @@
         "functionAppName": "[concat(variables('resourceNamePrefix'), '-fa')]",
         "appServicePlanName": "[concat(variables('resourceNamePrefix'), '-asp')]",
         "privateLinkScopeName": "[toLower(concat('das-', parameters('resourceEnvironmentName'),'-shared-ampls'))]",
-        "configNames": "SFA.DAS.EmployerFeedback.Jobs"
+        "configNames": "SFA.DAS.EmployerFeedback.Jobs,SFA.DAS.Encoding"
     },
     "resources": [
         {
