@@ -4,6 +4,7 @@ using SFA.DAS.Http.Configuration;
 using SFA.DAS.Http.MessageHandlers;
 using SFA.DAS.EmployerFeedback.Infrastructure.Api;
 using SFA.DAS.EmployerFeedback.Infrastructure.Configuration;
+using SFA.DAS.EmployerFeedback.Jobs.Services;
 using System.Diagnostics.CodeAnalysis;
 
 namespace SFA.DAS.EmployerFeedback.Jobs.Extensions
@@ -29,6 +30,12 @@ namespace SFA.DAS.EmployerFeedback.Jobs.Extensions
 
             services.AddTransient<IApimClientConfiguration>((_) => configuration);
 
+            return services;
+        }
+
+        public static IServiceCollection AddApplicationServices(this IServiceCollection services)
+        {
+            services.AddScoped<IWaveFanoutService, WaveFanoutService>();
             return services;
         }
     }

@@ -74,6 +74,9 @@
         "generateFeedbackTransactionsTimerSchedule": {
             "type": "string"
         },
+        "processFeedbackTransactionsEmailsSchedule": {
+            "type": "string"
+        },
         "sharedManagementResourceGroup": {
             "type": "string"
         },
@@ -307,6 +310,10 @@
                                 {
                                     "name": "GenerateFeedbackTransactionsTimerSchedule",
                                     "value": "[parameters('generateFeedbackTransactionsTimerSchedule')]"
+                                },
+                                {
+                                    "name": "ProcessFeedbackTransactionsEmailsSchedule",
+                                    "value": "[parameters('processFeedbackTransactionsEmailsSchedule')]"
                                 }
                             ]
                         }
