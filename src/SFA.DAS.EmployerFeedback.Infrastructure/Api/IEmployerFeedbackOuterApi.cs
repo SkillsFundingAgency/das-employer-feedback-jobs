@@ -5,16 +5,16 @@ namespace SFA.DAS.EmployerFeedback.Infrastructure.Api
 {
     public interface IEmployerFeedbackOuterApi
     {
-        [Post("/account/update")]
+        [Post("/accounts/update")]
         Task SyncEmployerAccounts();
 
         [Post("dataload/generate-feedback-summaries")]
         Task GenerateFeedbackSummaries();
 
-        [Get("/account")]
+        [Get("/accounts")]
         Task<GetFeedbackTransactionAccountIdsResponse> GetFeedbackTransactionAccountIds([Query] int batchsize);
 
-        [Post("/account/{accountId}/feedbacktransaction")]
+        [Post("/accounts/{accountId}/feedbacktransaction")]
         Task ProcessFeedbackTransactionForAccount([Path] string accountId);
 
         [Get("/feedbacktransactions")]
