@@ -114,7 +114,7 @@ namespace SFA.DAS.EmployerFeedback.Jobs.Functions
                 var emailResults = await _waveFanoutService.ExecuteAsync(
                     emailRequests,
                     SendSingleEmailAsync,
-                   _configuration.ProcessFeedbackEmailsMaxParallelism,
+                   _configuration.ProcessFeedbackEmailsPerSecondCap,
                     1000);
 
                 var sentCount = emailResults.Count(r => r);

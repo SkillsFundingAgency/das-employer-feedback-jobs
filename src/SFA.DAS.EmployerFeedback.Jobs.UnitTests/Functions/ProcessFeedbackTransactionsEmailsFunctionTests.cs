@@ -37,7 +37,7 @@ namespace SFA.DAS.EmployerFeedback.Jobs.UnitTests.Functions
             _configuration = new ApplicationConfiguration
             {
                 ProcessFeedbackEmailsBatchSize = 25,
-                ProcessFeedbackEmailsMaxParallelism = 10,
+                ProcessFeedbackEmailsPerSecondCap = 10,
                 NotificationTemplates = new List<NotificationTemplate>
                 {
                     new NotificationTemplate
@@ -87,7 +87,7 @@ namespace SFA.DAS.EmployerFeedback.Jobs.UnitTests.Functions
             _waveFanoutServiceMock.Setup(x => x.ExecuteAsync(
                 It.IsAny<IEnumerable<SendFeedbackEmailRequest>>(),
                 It.IsAny<Func<SendFeedbackEmailRequest, Task<bool>>>(),
-                _configuration.ProcessFeedbackEmailsMaxParallelism,
+                _configuration.ProcessFeedbackEmailsPerSecondCap,
                 1000))
                 .Returns<IEnumerable<SendFeedbackEmailRequest>, Func<SendFeedbackEmailRequest, Task<bool>>, int, int>(
                     async (items, func, perSecondCap, delay) =>
@@ -113,7 +113,7 @@ namespace SFA.DAS.EmployerFeedback.Jobs.UnitTests.Functions
             _waveFanoutServiceMock.Verify(x => x.ExecuteAsync(
                 It.IsAny<IEnumerable<SendFeedbackEmailRequest>>(),
                 It.IsAny<Func<SendFeedbackEmailRequest, Task<bool>>>(),
-                _configuration.ProcessFeedbackEmailsMaxParallelism,
+                _configuration.ProcessFeedbackEmailsPerSecondCap,
                 1000), Times.Exactly(3));
 
             _loggerMock.Verify(x => x.Log(
@@ -161,7 +161,7 @@ namespace SFA.DAS.EmployerFeedback.Jobs.UnitTests.Functions
             _waveFanoutServiceMock.Setup(x => x.ExecuteAsync(
                 It.IsAny<IEnumerable<SendFeedbackEmailRequest>>(),
                 It.IsAny<Func<SendFeedbackEmailRequest, Task<bool>>>(),
-                _configuration.ProcessFeedbackEmailsMaxParallelism,
+                _configuration.ProcessFeedbackEmailsPerSecondCap,
                 1000))
                 .ReturnsAsync(new List<bool> { true }.AsReadOnly());
 
@@ -208,7 +208,7 @@ namespace SFA.DAS.EmployerFeedback.Jobs.UnitTests.Functions
             _waveFanoutServiceMock.Setup(x => x.ExecuteAsync(
                 It.IsAny<IEnumerable<SendFeedbackEmailRequest>>(),
                 It.IsAny<Func<SendFeedbackEmailRequest, Task<bool>>>(),
-                _configuration.ProcessFeedbackEmailsMaxParallelism,
+                _configuration.ProcessFeedbackEmailsPerSecondCap,
                 1000))
                 .Returns<IEnumerable<SendFeedbackEmailRequest>, Func<SendFeedbackEmailRequest, Task<bool>>, int, int>(
                     async (items, func, perSecondCap, delay) =>
@@ -227,7 +227,7 @@ namespace SFA.DAS.EmployerFeedback.Jobs.UnitTests.Functions
             _waveFanoutServiceMock.Verify(x => x.ExecuteAsync(
                 It.IsAny<IEnumerable<SendFeedbackEmailRequest>>(),
                 It.IsAny<Func<SendFeedbackEmailRequest, Task<bool>>>(),
-                _configuration.ProcessFeedbackEmailsMaxParallelism,
+                _configuration.ProcessFeedbackEmailsPerSecondCap,
                 1000), Times.Exactly(25));
 
             _apiMock.Verify(x => x.SendFeedbackEmail(It.IsAny<SendFeedbackEmailRequest>()), Times.Exactly(25));
@@ -269,7 +269,7 @@ namespace SFA.DAS.EmployerFeedback.Jobs.UnitTests.Functions
             _waveFanoutServiceMock.Setup(x => x.ExecuteAsync(
                 It.IsAny<IEnumerable<SendFeedbackEmailRequest>>(),
                 It.IsAny<Func<SendFeedbackEmailRequest, Task<bool>>>(),
-                _configuration.ProcessFeedbackEmailsMaxParallelism,
+                _configuration.ProcessFeedbackEmailsPerSecondCap,
                 1000))
                 .Returns<IEnumerable<SendFeedbackEmailRequest>, Func<SendFeedbackEmailRequest, Task<bool>>, int, int>(
                     async (items, func, perSecondCap, delay) =>
