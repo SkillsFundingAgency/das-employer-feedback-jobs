@@ -25,7 +25,7 @@ namespace SFA.DAS.EmployerFeedback.Jobs.Services
             var list = (items as IList<TIn>) ?? items.ToList();
             var results = new List<TOut>(list.Count);
 
-            _logger.LogDebug("WaveFanOut: Activities to process {ActivityCount}", list.Count);
+            _logger.LogInformation("WaveFanOut: Activities to process {ActivityCount}", list.Count);
 
             int index = 0;
             while (index < list.Count)
@@ -39,7 +39,7 @@ namespace SFA.DAS.EmployerFeedback.Jobs.Services
                     waveTasks.Add(startFunc(list[index + k]));
                 }
 
-                _logger.LogDebug("WaveFanOut: Activities tasks to wait for {TaskCount}", waveTasks.Count);
+                _logger.LogInformation("WaveFanOut: Activities tasks to wait for {TaskCount}", waveTasks.Count);
 
                 var waveResults = await Task.WhenAll(waveTasks);
                 results.AddRange(waveResults);
@@ -47,13 +47,13 @@ namespace SFA.DAS.EmployerFeedback.Jobs.Services
 
                 if (index < list.Count)
                 {
-                    _logger.LogDebug("WaveFanOut: Waiting {DelayMs}ms before next wave", delayBetweenWavesMs);
+                    _logger.LogInformation("WaveFanOut: Waiting {DelayMs}ms before next wave", delayBetweenWavesMs);
                     await Task.Delay(delayBetweenWavesMs);
-                    _logger.LogDebug("WaveFanOut: Resumed");
+                    _logger.LogInformation("WaveFanOut: Resumed");
                 }
             }
 
-            _logger.LogDebug("WaveFanOut: Results to report {ResultCount}", results.Count);
+            _logger.LogInformation("WaveFanOut: Results to report {ResultCount}", results.Count);
 
             return results;
         }

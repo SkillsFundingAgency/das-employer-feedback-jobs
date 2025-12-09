@@ -28,7 +28,7 @@ namespace SFA.DAS.EmployerFeedback.Jobs.Functions
 
                 var accountIdsResponse = await ExecuteWithRetry(async () =>
                 {
-                    Logger.LogDebug("Fetching feedback transaction account IDs");
+                    Logger.LogInformation("Fetching feedback transaction account IDs");
                     return await _api.GetFeedbackTransactionAccountIds(_configuration.GenerateFeedbackTransactionsBatchSize);
                 }, MaxRetryAttempts, CancellationToken.None);
 
@@ -86,9 +86,9 @@ namespace SFA.DAS.EmployerFeedback.Jobs.Functions
         {
             await ExecuteWithRetry(async () =>
             {
-                Logger.LogDebug("Processing feedback transaction for account {AccountId}", accountId);
+                Logger.LogInformation("Processing feedback transaction for account {AccountId}", accountId);
                 await _api.ProcessFeedbackTransactionForAccount(accountId);
-                Logger.LogDebug("Successfully processed feedback transaction for account {AccountId}", accountId);
+                Logger.LogInformation("Successfully processed feedback transaction for account {AccountId}", accountId);
                 return true;
             }, MaxRetryAttempts, CancellationToken.None);
         }
