@@ -3,7 +3,6 @@ using Microsoft.Extensions.Logging;
 using SFA.DAS.EmployerFeedback.Infrastructure.Api;
 using SFA.DAS.EmployerFeedback.Infrastructure.Configuration;
 using SFA.DAS.EmployerFeedback.Infrastructure.Models;
-using SFA.DAS.EmployerFeedback.Jobs.Services;
 using SFA.DAS.Encoding;
 
 namespace SFA.DAS.EmployerFeedback.Jobs.Functions
@@ -12,19 +11,16 @@ namespace SFA.DAS.EmployerFeedback.Jobs.Functions
     {
         private readonly IEmployerFeedbackOuterApi _api;
         private readonly ApplicationConfiguration _configuration;
-        private readonly IWaveFanoutService _waveFanoutService;
         private readonly IEncodingService _encodingService;
 
         public ProcessFeedbackTransactionsEmailsFunction(
             ILogger<ProcessFeedbackTransactionsEmailsFunction> logger,
             IEmployerFeedbackOuterApi api,
             ApplicationConfiguration configuration,
-            IWaveFanoutService waveFanoutService,
             IEncodingService encodingService) : base(logger)
         {
             _api = api;
             _configuration = configuration;
-            _waveFanoutService = waveFanoutService;
             _encodingService = encodingService;
         }
 
@@ -37,7 +33,7 @@ namespace SFA.DAS.EmployerFeedback.Jobs.Functions
 
                 var response = await ExecuteWithRetry(async () =>
                 {
-                    Logger.LogDebug("Fetching feedback transactions to email");
+                    Logger.LogInformation("Fetching feedback transactions to email");
                     return await _api.GetFeedbackTransactionsBatch(_configuration.ProcessFeedbackEmailsBatchSize);
                 }, MaxRetryAttempts, CancellationToken.None);
 
@@ -69,11 +65,11 @@ namespace SFA.DAS.EmployerFeedback.Jobs.Functions
         {
             try
             {
-                Logger.LogDebug("Starting processing for feedback transaction {TransactionId}", transactionId);
+                Logger.LogInformation("Starting processing for feedback transaction {TransactionId}", transactionId);
 
                 var usersResponse = await ExecuteWithRetry(async () =>
                 {
-                    Logger.LogDebug("Getting users for feedback transaction {TransactionId}", transactionId);
+                    Logger.LogInformation("Getting users for feedback transaction {TransactionId}", transactionId);
                     return await _api.GetFeedbackTransactionUsers(transactionId);
                 }, MaxRetryAttempts, CancellationToken.None);
 
@@ -108,17 +104,29 @@ namespace SFA.DAS.EmployerFeedback.Jobs.Functions
                     FeedbackBaseUrl = _configuration.EmployerFeedbackBaseUrl
                 }).ToList();
 
-                Logger.LogInformation("Sending {EmailCount} emails for transaction {TransactionId} with throttling (max 10 per second)",
-                    emailRequests.Count, transactionId);
+                Logger.LogInformation("Sending {EmailCount} emails for transaction {TransactionId} with {DelayMs}ms delay between emails",
+                    emailRequests.Count, transactionId, _configuration.ProcessFeedbackEmailsDelayMs);
 
-                var emailResults = await _waveFanoutService.ExecuteAsync(
-                    emailRequests,
-                    SendSingleEmailAsync,
-                   _configuration.ProcessFeedbackEmailsMaxParallelism,
-                    1000);
+                var sentCount = 0;
+                var failedCount = 0;
 
-                var sentCount = emailResults.Count(r => r);
-                var failedCount = emailResults.Count - sentCount;
+                foreach (var emailRequest in emailRequests)
+                {
+                    var emailSent = await SendSingleEmailAsync(emailRequest);
+                    if (emailSent)
+                    {
+                        sentCount++;
+                    }
+                    else
+                    {
+                        failedCount++;
+                    }
+
+                    // Add configurable delay after each email
+                    Logger.LogInformation("Applying {DelayMs}ms delay before sending next email", _configuration.ProcessFeedbackEmailsDelayMs);
+                    await Task.Delay(_configuration.ProcessFeedbackEmailsDelayMs);
+                    Logger.LogInformation("Delay completed, ready to send next email");
+                }
 
                 Logger.LogInformation("Email sending completed for transaction {TransactionId}: {SentCount} sent, {FailedCount} failed",
                     transactionId, sentCount, failedCount);
@@ -143,13 +151,13 @@ namespace SFA.DAS.EmployerFeedback.Jobs.Functions
             {
                 await ExecuteWithRetry(async () =>
                 {
-                    Logger.LogDebug("Sending email to {Contact} with template {TemplateId}",
+                    Logger.LogInformation("Sending email to {Contact} with template {TemplateId}",
                         emailRequest.Contact, emailRequest.TemplateId);
                     await _api.SendFeedbackEmail(emailRequest);
                     return true;
                 }, MaxRetryAttempts, CancellationToken.None);
 
-                Logger.LogDebug("Successfully sent email to {Contact}", emailRequest.Contact);
+                Logger.LogInformation("Successfully sent email to {Contact}", emailRequest.Contact);
                 return true;
             }
             catch (Exception ex)
@@ -175,13 +183,13 @@ namespace SFA.DAS.EmployerFeedback.Jobs.Functions
 
                 await ExecuteWithRetry(async () =>
                 {
-                    Logger.LogDebug("Updating feedback transaction {TransactionId} with sent count {SentCount}",
+                    Logger.LogInformation("Updating feedback transaction {TransactionId} with sent count {SentCount}",
                         transactionId, sentCount);
                     await _api.UpdateFeedbackTransaction(transactionId, updateRequest);
                     return true;
                 }, MaxRetryAttempts, CancellationToken.None);
 
-                Logger.LogDebug("Successfully updated feedback transaction {TransactionId}", transactionId);
+                Logger.LogInformation("Successfully updated feedback transaction {TransactionId}", transactionId);
             }
             catch (Exception ex)
             {
