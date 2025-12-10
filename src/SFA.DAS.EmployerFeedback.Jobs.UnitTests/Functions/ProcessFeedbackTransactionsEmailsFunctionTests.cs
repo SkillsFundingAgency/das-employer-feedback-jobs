@@ -10,7 +10,6 @@ using SFA.DAS.EmployerFeedback.Infrastructure.Api;
 using SFA.DAS.EmployerFeedback.Infrastructure.Configuration;
 using SFA.DAS.EmployerFeedback.Infrastructure.Models;
 using SFA.DAS.EmployerFeedback.Jobs.Functions;
-using SFA.DAS.EmployerFeedback.Jobs.Services;
 using SFA.DAS.Encoding;
 
 namespace SFA.DAS.EmployerFeedback.Jobs.UnitTests.Functions
@@ -20,7 +19,6 @@ namespace SFA.DAS.EmployerFeedback.Jobs.UnitTests.Functions
     {
         private Mock<ILogger<ProcessFeedbackTransactionsEmailsFunction>> _loggerMock;
         private Mock<IEmployerFeedbackOuterApi> _apiMock;
-        private Mock<IWaveFanoutService> _waveFanoutServiceMock;
         private Mock<IEncodingService> _encodingServiceMock;
         private ApplicationConfiguration _configuration;
         private ProcessFeedbackTransactionsEmailsFunction _function;
@@ -31,13 +29,12 @@ namespace SFA.DAS.EmployerFeedback.Jobs.UnitTests.Functions
         {
             _loggerMock = new Mock<ILogger<ProcessFeedbackTransactionsEmailsFunction>>();
             _apiMock = new Mock<IEmployerFeedbackOuterApi>();
-            _waveFanoutServiceMock = new Mock<IWaveFanoutService>();
             _encodingServiceMock = new Mock<IEncodingService>();
 
             _configuration = new ApplicationConfiguration
             {
                 ProcessFeedbackEmailsBatchSize = 25,
-                ProcessFeedbackEmailsPerSecondCap = 10,
+                ProcessFeedbackEmailsDelayMs = 100,
                 NotificationTemplates = new List<NotificationTemplate>
                 {
                     new NotificationTemplate
@@ -56,7 +53,6 @@ namespace SFA.DAS.EmployerFeedback.Jobs.UnitTests.Functions
                 _loggerMock.Object,
                 _apiMock.Object,
                 _configuration,
-                _waveFanoutServiceMock.Object,
                 _encodingServiceMock.Object);
         }
 
@@ -84,23 +80,6 @@ namespace SFA.DAS.EmployerFeedback.Jobs.UnitTests.Functions
             _apiMock.Setup(x => x.SendFeedbackEmail(It.IsAny<SendFeedbackEmailRequest>())).Returns(Task.CompletedTask);
             _apiMock.Setup(x => x.UpdateFeedbackTransaction(It.IsAny<long>(), It.IsAny<UpdateFeedbackTransactionRequest>())).Returns(Task.CompletedTask);
 
-            _waveFanoutServiceMock.Setup(x => x.ExecuteAsync(
-                It.IsAny<IEnumerable<SendFeedbackEmailRequest>>(),
-                It.IsAny<Func<SendFeedbackEmailRequest, Task<bool>>>(),
-                _configuration.ProcessFeedbackEmailsPerSecondCap,
-                1000))
-                .Returns<IEnumerable<SendFeedbackEmailRequest>, Func<SendFeedbackEmailRequest, Task<bool>>, int, int>(
-                    async (items, func, perSecondCap, delay) =>
-                    {
-                        var results = new List<bool>();
-                        foreach (var item in items)
-                        {
-                            var result = await func(item);
-                            results.Add(result);
-                        }
-                        return results.AsReadOnly();
-                    });
-
             await _function.ProcessFeedbackTransactionsEmailsTimer(timerInfo);
 
             _apiMock.Verify(x => x.GetFeedbackTransactionsBatch(_configuration.ProcessFeedbackEmailsBatchSize), Times.Once);
@@ -109,12 +88,6 @@ namespace SFA.DAS.EmployerFeedback.Jobs.UnitTests.Functions
             _apiMock.Verify(x => x.SendFeedbackEmail(It.IsAny<SendFeedbackEmailRequest>()), Times.Exactly(6));
 
             _apiMock.Verify(x => x.UpdateFeedbackTransaction(It.IsAny<long>(), It.IsAny<UpdateFeedbackTransactionRequest>()), Times.Exactly(3));
-
-            _waveFanoutServiceMock.Verify(x => x.ExecuteAsync(
-                It.IsAny<IEnumerable<SendFeedbackEmailRequest>>(),
-                It.IsAny<Func<SendFeedbackEmailRequest, Task<bool>>>(),
-                _configuration.ProcessFeedbackEmailsPerSecondCap,
-                1000), Times.Exactly(3));
 
             _loggerMock.Verify(x => x.Log(
                 LogLevel.Information,
@@ -158,13 +131,6 @@ namespace SFA.DAS.EmployerFeedback.Jobs.UnitTests.Functions
             _apiMock.Setup(x => x.SendFeedbackEmail(It.IsAny<SendFeedbackEmailRequest>())).Returns(Task.CompletedTask);
             _apiMock.Setup(x => x.UpdateFeedbackTransaction(It.IsAny<long>(), It.IsAny<UpdateFeedbackTransactionRequest>())).Returns(Task.CompletedTask);
 
-            _waveFanoutServiceMock.Setup(x => x.ExecuteAsync(
-                It.IsAny<IEnumerable<SendFeedbackEmailRequest>>(),
-                It.IsAny<Func<SendFeedbackEmailRequest, Task<bool>>>(),
-                _configuration.ProcessFeedbackEmailsPerSecondCap,
-                1000))
-                .ReturnsAsync(new List<bool> { true }.AsReadOnly());
-
             await _function.ProcessFeedbackTransactionsEmailsTimer(timerInfo);
 
             _apiMock.Verify(x => x.GetFeedbackTransactionsBatch(_configuration.ProcessFeedbackEmailsBatchSize), Times.Exactly(2));
@@ -178,7 +144,7 @@ namespace SFA.DAS.EmployerFeedback.Jobs.UnitTests.Functions
         }
 
         [Test]
-        public async Task ProcessFeedbackTransactionsEmailsTimer_ProcessesWithWaveFanout()
+        public async Task ProcessFeedbackTransactionsEmailsTimer_ProcessesWithSequentialDelayedEmails()
         {
             var timerInfo = (TimerInfo)Activator.CreateInstance(typeof(TimerInfo), true);
             var transactionIds = new List<long>();
@@ -205,30 +171,7 @@ namespace SFA.DAS.EmployerFeedback.Jobs.UnitTests.Functions
             _apiMock.Setup(x => x.SendFeedbackEmail(It.IsAny<SendFeedbackEmailRequest>())).Returns(Task.CompletedTask);
             _apiMock.Setup(x => x.UpdateFeedbackTransaction(It.IsAny<long>(), It.IsAny<UpdateFeedbackTransactionRequest>())).Returns(Task.CompletedTask);
 
-            _waveFanoutServiceMock.Setup(x => x.ExecuteAsync(
-                It.IsAny<IEnumerable<SendFeedbackEmailRequest>>(),
-                It.IsAny<Func<SendFeedbackEmailRequest, Task<bool>>>(),
-                _configuration.ProcessFeedbackEmailsPerSecondCap,
-                1000))
-                .Returns<IEnumerable<SendFeedbackEmailRequest>, Func<SendFeedbackEmailRequest, Task<bool>>, int, int>(
-                    async (items, func, perSecondCap, delay) =>
-                    {
-                        var results = new List<bool>();
-                        foreach (var item in items)
-                        {
-                            var result = await func(item);
-                            results.Add(result);
-                        }
-                        return results.AsReadOnly();
-                    });
-
             await _function.ProcessFeedbackTransactionsEmailsTimer(timerInfo);
-
-            _waveFanoutServiceMock.Verify(x => x.ExecuteAsync(
-                It.IsAny<IEnumerable<SendFeedbackEmailRequest>>(),
-                It.IsAny<Func<SendFeedbackEmailRequest, Task<bool>>>(),
-                _configuration.ProcessFeedbackEmailsPerSecondCap,
-                1000), Times.Exactly(25));
 
             _apiMock.Verify(x => x.SendFeedbackEmail(It.IsAny<SendFeedbackEmailRequest>()), Times.Exactly(25));
 
@@ -238,6 +181,13 @@ namespace SFA.DAS.EmployerFeedback.Jobs.UnitTests.Functions
                 It.Is<It.IsAnyType>((v, t) => v.ToString().Contains("Processing 25 feedback transactions sequentially")),
                 null,
                 It.IsAny<Func<It.IsAnyType, Exception, string>>()), Times.Once);
+
+            _loggerMock.Verify(x => x.Log(
+                LogLevel.Information,
+                It.IsAny<EventId>(),
+                It.Is<It.IsAnyType>((v, t) => v.ToString().Contains("Sending 1 emails for transaction") && v.ToString().Contains("with 100ms delay between emails")),
+                null,
+                It.IsAny<Func<It.IsAnyType, Exception, string>>()), Times.Exactly(25));
         }
 
         [Test]
@@ -265,23 +215,6 @@ namespace SFA.DAS.EmployerFeedback.Jobs.UnitTests.Functions
 
             _apiMock.Setup(x => x.SendFeedbackEmail(It.IsAny<SendFeedbackEmailRequest>())).Returns(Task.CompletedTask);
             _apiMock.Setup(x => x.UpdateFeedbackTransaction(It.IsAny<long>(), It.IsAny<UpdateFeedbackTransactionRequest>())).Returns(Task.CompletedTask);
-
-            _waveFanoutServiceMock.Setup(x => x.ExecuteAsync(
-                It.IsAny<IEnumerable<SendFeedbackEmailRequest>>(),
-                It.IsAny<Func<SendFeedbackEmailRequest, Task<bool>>>(),
-                _configuration.ProcessFeedbackEmailsPerSecondCap,
-                1000))
-                .Returns<IEnumerable<SendFeedbackEmailRequest>, Func<SendFeedbackEmailRequest, Task<bool>>, int, int>(
-                    async (items, func, perSecondCap, delay) =>
-                    {
-                        var results = new List<bool>();
-                        foreach (var item in items)
-                        {
-                            var result = await func(item);
-                            results.Add(result);
-                        }
-                        return results.AsReadOnly();
-                    });
 
             await _function.ProcessFeedbackTransactionsEmailsTimer(timerInfo);
 
