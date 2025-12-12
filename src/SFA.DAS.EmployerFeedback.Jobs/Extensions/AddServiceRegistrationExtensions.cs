@@ -1,9 +1,10 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
 using RestEase.HttpClientFactory;
-using SFA.DAS.Http.Configuration;
-using SFA.DAS.Http.MessageHandlers;
 using SFA.DAS.EmployerFeedback.Infrastructure.Api;
 using SFA.DAS.EmployerFeedback.Infrastructure.Configuration;
+using SFA.DAS.Encoding;
+using SFA.DAS.Http.Configuration;
+using SFA.DAS.Http.MessageHandlers;
 using System.Diagnostics.CodeAnalysis;
 
 namespace SFA.DAS.EmployerFeedback.Jobs.Extensions
@@ -29,6 +30,12 @@ namespace SFA.DAS.EmployerFeedback.Jobs.Extensions
 
             services.AddTransient<IApimClientConfiguration>((_) => configuration);
 
+            return services;
+        }
+
+        public static IServiceCollection AddApplicationServices(this IServiceCollection services)
+        {
+            services.AddTransient<IEncodingService, EncodingService>();
             return services;
         }
     }

@@ -23,6 +23,7 @@ namespace SFA.DAS.EmployerFeedback.Jobs
                     services.ConfigureFromOptions(f => f.EmployerFeedbackOuterApiConfiguration);
 
                     services.AddOuterApi();
+                    services.AddApplicationServices();
                     services.AddOpenTelemetryRegistration(context.Configuration["APPLICATIONINSIGHTS_CONNECTION_STRING"]!);
 
                 })

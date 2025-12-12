@@ -4,14 +4,14 @@ using SFA.DAS.EmployerFeedback.Infrastructure.Api;
 
 namespace SFA.DAS.EmployerFeedback.Jobs.Functions
 {
-    public class SyncEmployerAccountsFunction
+    public class SyncEmployerAccountsFunction : BaseFunction<SyncEmployerAccountsFunction>
     {
-        private readonly ILogger<SyncEmployerAccountsFunction> _logger;
         private readonly IEmployerFeedbackOuterApi _api;
 
-        public SyncEmployerAccountsFunction(ILogger<SyncEmployerAccountsFunction> log, IEmployerFeedbackOuterApi api)
+        public SyncEmployerAccountsFunction(
+            ILogger<SyncEmployerAccountsFunction> logger, 
+            IEmployerFeedbackOuterApi api) : base(logger)
         {
-            _logger = log;
             _api = api;
         }
 
@@ -20,15 +20,15 @@ namespace SFA.DAS.EmployerFeedback.Jobs.Functions
         {
             try
             {
-                _logger.LogInformation("SyncEmployerAccountsTimer has started");
+                Logger.LogInformation("SyncEmployerAccountsTimer has started");
 
                 await _api.SyncEmployerAccounts();
 
-                _logger.LogInformation("SyncEmployerAccountsTimer has finished");
+                Logger.LogInformation("SyncEmployerAccountsTimer has finished");
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "SyncEmployerAccountsTimer has failed");
+                Logger.LogError(ex, "SyncEmployerAccountsTimer has failed");
                 throw;
             }
         }
