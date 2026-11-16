@@ -27,10 +27,10 @@ The Sync Employer Accounts job ensures that the local Employer Feedback database
 ### Requirements
 
 In order to run this solution locally you will need:
-- Install [.NET 8.0 SDK](https://dotnet.microsoft.com/en-us/download/visual-studio-sdks)
-- Install [.NET Core 8.0](https://www.microsoft.com/net/download)
+- Install [.NET 10.0 SDK](https://dotnet.microsoft.com/en-us/download/visual-studio-sdks)
+- Install [.NET 10.0](https://www.microsoft.com/net/download)
 - Install [Azure Functions SDK](https://docs.microsoft.com/en-us/azure/azure-functions/functions-run-local)
-- Install [Visual Studio 2022 (Community or more advanced)](https://visualstudio.microsoft.com/vs/community/)
+- Install [Visual Studio 2026 (Community or more advanced) or any supported IDE](https://visualstudio.microsoft.com/vs/community/)
 - Install [SQL Server 2019 (or later) Developer Edition](https://www.microsoft.com/en-us/sql-server/sql-server-downloads)
 - Install [SQL Management Studio](https://docs.microsoft.com/en-us/sql/ssms/download-sql-server-management-studio-ssms)
 - Install [Azure Storage Explorer](http://storageexplorer.com/)
@@ -79,7 +79,7 @@ In the `SFA.DAS.EmployerFeedback.Jobs` project, if not existing already, add `lo
 * SFA.DAS.Configuration.AzureTableStorage
 
 ## Technologies
-* .Net 8.0
+* .Net 10.0
 * Azure Functions V4
 * Azure Table Storage
 * NUnit
